@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check } from "lucide-react";
 import { getCreneaux } from "../../api/eleve";
 import { useReservation } from "../../hooks/useReservation";
 import { useI18n } from "../../utils/i18n";
 import { formatHeure } from "../../utils/format";
+import { BackHeader, BottomCTA, SelectCard } from "../../components/ui";
 
 export default function Horaire() {
   const { t } = useI18n();
@@ -31,112 +31,61 @@ export default function Horaire() {
 
   if (!etat.plat) return null;
   const choix = etat.creneau;
-  const peutSuivre = choix !== null;
 
   return (
     <div className="min-h-screen bg-white pb-28">
-      <header className="flex items-center gap-3 px-5 pb-2 pt-12">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#eeece7] text-[#212121]"
-          aria-label="Retour"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1
-          className="text-[22px] font-bold leading-tight text-[#212121]"
-          style={{ fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.02em" }}
-        >
-          {t("horaire")}
-        </h1>
-      </header>
+      <BackHeader titre="À quelle heure ?" />
 
-      <main className="px-5 pt-2">
-        <p className="text-[13px] text-[#616161]">{t("choisir_creneau")}</p>
-
+      <main className="px-5 pt-6">
         {error && (
-          <p className="mt-4 rounded-xl bg-[#fff5f3] px-4 py-3 text-[13px] text-[#b30000]">
-            {error}
-          </p>
+          <p className="bg-[#fff1f1] px-4 py-3 text-[14px] text-[#b30000]">{error}</p>
         )}
-
         {creneaux === null && !error && (
-          <p className="mt-6 text-[13px] text-[#93939f]">Chargement…</p>
+          <p className="text-[14px] text-[#93939f]">Chargement…</p>
         )}
-
         {creneaux && creneaux.length === 0 && (
-          <p className="mt-6 rounded-xl bg-[#eeece7] px-4 py-3 text-[13px] text-[#616161]">
-            {t("aucun_creneau")}
-          </p>
+          <p className="text-[15px] text-[#616161]">{t("aucun_creneau")}</p>
         )}
 
-        <ul className="mt-5 space-y-2.5">
+        <ul className="space-y-3">
           {creneaux?.map((c) => {
             const complet = c.places_restantes <= 0;
-            const actif = choix?.id === c.id;
+            const occupation = c.capacite
+              ? Math.min(1, (c.capacite - c.places_restantes) / c.capacite)
+              : 1;
             return (
               <li key={c.id}>
-                <button
-                  type="button"
+                <SelectCard
+                  actif={choix?.id === c.id}
                   disabled={complet}
                   onClick={() => choisirCreneau(c)}
-                  className={`flex w-full items-center justify-between rounded-[18px] border px-4 py-4 text-left transition disabled:opacity-40 ${
-                    actif
-                      ? "border-[#003c33] bg-[#eeece7]"
-                      : "border-[#f2f2f2] bg-white"
-                  }`}
                 >
-                  <div>
-                    <p
-                      className="text-[18px] font-bold text-[#212121]"
-                      style={{
-                        fontFamily: "Space Grotesk, sans-serif",
-                        letterSpacing: "-0.02em",
-                      }}
-                    >
-                      {formatHeure(c.heure_debut)}
-                      <span className="text-[14px] font-medium text-[#93939f]">
-                        {" "}
-                        – {formatHeure(c.heure_fin)}
-                      </span>
-                    </p>
-                    <p
-                      className={`mt-1 text-[12.5px] ${
-                        complet ? "text-[#b30000]" : "text-[#616161]"
-                      }`}
-                    >
-                      {complet
-                        ? t("complet")
-                        : `${c.places_restantes} ${t("places_restantes")}`}
-                    </p>
-                  </div>
-                  <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-                      actif
-                        ? "border-[#003c33] bg-[#003c33] text-white"
-                        : "border-[#d9d9dd]"
-                    }`}
+                  <p
+                    className={`text-[18px] font-medium ${complet ? "text-[#93939f]" : "text-[#212121]"}`}
                   >
-                    {actif && <Check size={14} strokeWidth={3} />}
-                  </span>
-                </button>
+                    {formatHeure(c.heure_debut)} – {formatHeure(c.heure_fin)}
+                  </p>
+                  <p className={`mt-0.5 text-[14px] ${complet ? "text-[#93939f]" : "text-[#616161]"}`}>
+                    {complet
+                      ? "Complet"
+                      : `${c.places_restantes} place${c.places_restantes > 1 ? "s" : ""} restante${c.places_restantes > 1 ? "s" : ""}`}
+                  </p>
+                  <div className="mt-3 h-1 overflow-hidden rounded-[2px] bg-[#eeece7]">
+                    <div
+                      className={`h-full rounded-[2px] ${complet ? "bg-[#93939f]" : "bg-[#003c33]"}`}
+                      style={{ width: `${occupation * 100}%` }}
+                    />
+                  </div>
+                </SelectCard>
               </li>
             );
           })}
         </ul>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white to-transparent px-5 pb-6 pt-6">
-        <button
-          type="button"
-          disabled={!peutSuivre}
-          onClick={() => navigate("/reservation/place")}
-          className="w-full rounded-[32px] bg-[#17171c] px-6 py-3.5 text-[15px] font-semibold text-white disabled:opacity-40"
-        >
-          {t("suivant")}
-        </button>
-      </div>
+      <BottomCTA disabled={!choix} onClick={() => navigate("/reservation/place")}>
+        {t("suivant")}
+      </BottomCTA>
     </div>
   );
 }

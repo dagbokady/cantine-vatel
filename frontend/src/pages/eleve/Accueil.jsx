@@ -60,5 +60,10 @@ export default function Accueil() {
   if (!menu.commandes_ouvertes) {
     return <EcranPatientez me={me} menu={menu} raison="fermees" />;
   }
+  const epuise =
+    menu.compatibles.length > 0 && menu.compatibles.every((o) => o.stock_restant < 3);
+  if (epuise) {
+    return <EcranPatientez me={me} menu={menu} raison="epuise" />;
+  }
   return <EcranRepasDuJour me={me} menu={menu} />;
 }

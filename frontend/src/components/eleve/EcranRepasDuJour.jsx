@@ -45,7 +45,7 @@ export default function EcranRepasDuJour({ me, menu }) {
       {/* Meal photo */}
       {plat && (
         <div className="px-6">
-          <div className="overflow-hidden rounded-[var(--rounded-md)]" style={{ borderRadius: "14px" }}>
+          <div className="overflow-hidden rounded-[var(--rounded-md)]" style={{ borderRadius: "22px" }}>
             {plat.photo ? (
               <img
                 src={plat.photo}
@@ -187,7 +187,7 @@ export default function EcranRepasDuJour({ me, menu }) {
           className="w-full py-3.5 text-[16px] font-medium text-[var(--color-on-primary)] disabled:opacity-40"
           style={{
             backgroundColor: peutReserver ? "var(--color-primary)" : "var(--color-primary)",
-            borderRadius: "var(--rounded-sm)",
+            borderRadius: "var(--rounded-xl)",
             lineHeight: 1.25,
           }}
         >

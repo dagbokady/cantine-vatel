@@ -15,7 +15,7 @@ import Place from "./pages/eleve/Place";
 function Layout({ children }) {
   const { pathname } = useLocation();
   const sansNav =
-    pathname === "/login" || pathname === "/" || pathname.startsWith("/reservation");
+    pathname === "/login" || pathname === "/" || pathname === "/profil" || pathname.startsWith("/reservation");
   return (
     <>
       {children}

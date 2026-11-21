@@ -1,10 +1,36 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, UtensilsCrossed } from "lucide-react";
+import { UtensilsCrossed } from "lucide-react";
 import { getMenuDuJour } from "../../api/eleve";
 import { useReservation } from "../../hooks/useReservation";
 import { useI18n } from "../../utils/i18n";
-import { fcfa } from "../../utils/format";
+import { decouperNomPlat, fcfa } from "../../utils/format";
+import { BackHeader, BottomCTA, SelectCard } from "../../components/ui";
+
+const LIBELLE_TYPE = {
+  principal: "Plat du jour",
+  sans_allergene: "Sans allergène",
+  accompagnement: "Accompagnement",
+};
+
+function OptionCarte({ option, actif, onClick }) {
+  const { nom, mention } = decouperNomPlat(option.nom);
+  return (
+    <SelectCard actif={actif} onClick={onClick}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[16px] font-medium text-[#212121]">{nom}</span>
+        {mention && (
+          <span className="rounded-full bg-[#eeece7] px-2.5 py-0.5 text-[12px] text-[#212121]">
+            {mention}
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-[14px] text-[#616161]">
+        {fcfa(option.prix)} · {LIBELLE_TYPE[option.type] || "Plat"}
+      </p>
+    </SelectCard>
+  );
+}
 
 export default function Reservation() {
   const { t } = useI18n();
@@ -25,108 +51,59 @@ export default function Reservation() {
     };
   }, []);
 
-  const options = menu
-    ? menu.compatibles.filter((o) => o.stock_restant >= 3)
-    : [];
+  // Les options incompatibles avec les allergies ne sont jamais affichées.
+  const options = menu ? menu.compatibles.filter((o) => o.stock_restant >= 3) : [];
+  const plats = options.filter((o) => o.type !== "accompagnement");
+  const accompagnements = options.filter((o) => o.type === "accompagnement");
+  const photo = (menu?.compatibles.find((o) => o.type === "principal") || plats[0])?.photo;
   const choix = etat.plat;
-  const peutSuivre = choix !== null;
+
+  const carte = (o) => (
+    <li key={o.menu_jour_id}>
+      <OptionCarte
+        option={o}
+        actif={choix?.menu_jour_id === o.menu_jour_id}
+        onClick={() => choisirPlat(o)}
+      />
+    </li>
+  );
 
   return (
     <div className="min-h-screen bg-white pb-28">
-      <header className="flex items-center gap-3 px-5 pb-2 pt-12">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#eeece7] text-[#212121]"
-          aria-label="Retour"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1
-          className="text-[22px] font-bold leading-tight text-[#212121]"
-          style={{ fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.02em" }}
-        >
-          {t("reservation")}
-        </h1>
-      </header>
+      <BackHeader titre="Choisir mon repas" to="/" />
 
-      <main className="px-5 pt-4">
-        <p className="text-[13px] text-[#616161]">{t("choisir_plat")}</p>
+      <main className="px-5 pt-6">
+        <div className="overflow-hidden rounded-[22px] bg-[#eeece7]" style={{ aspectRatio: "4/3" }}>
+          {photo ? (
+            <img src={photo} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <UtensilsCrossed size={48} strokeWidth={1.25} className="text-[#93939f]" />
+            </div>
+          )}
+        </div>
 
         {error && (
-          <p className="mt-4 rounded-xl bg-[#fff5f3] px-4 py-3 text-[13px] text-[#b30000]">
-            {error}
-          </p>
+          <p className="mt-5 bg-[#fff1f1] px-4 py-3 text-[14px] text-[#b30000]">{error}</p>
         )}
-
-        {!menu && !error && (
-          <p className="mt-6 text-[13px] text-[#93939f]">Chargement…</p>
-        )}
-
+        {!menu && !error && <p className="mt-5 text-[14px] text-[#93939f]">Chargement…</p>}
         {menu && options.length === 0 && !error && (
-          <p className="mt-6 rounded-xl bg-[#eeece7] px-4 py-3 text-[13px] text-[#616161]">
-            Aucun plat disponible pour le moment.
-          </p>
+          <p className="mt-5 text-[15px] text-[#616161]">Aucun plat disponible pour le moment.</p>
         )}
 
-        <ul className="mt-4 space-y-2.5">
-          {options.map((o) => {
-            const actif = choix?.menu_jour_id === o.menu_jour_id;
-            return (
-              <li key={o.menu_jour_id}>
-                <button
-                  type="button"
-                  onClick={() => choisirPlat(o)}
-                  className={`flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
-                    actif
-                      ? "border-[#003c33] bg-[#eeece7]"
-                      : "border-[#f2f2f2] bg-white"
-                  }`}
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#eeece7]">
-                    {o.photo ? (
-                      <img src={o.photo} alt="" className="h-14 w-14 object-cover" />
-                    ) : (
-                      <UtensilsCrossed size={22} className="text-[#93939f]" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="truncate text-[15px] font-semibold text-[#212121]"
-                      style={{ fontFamily: "Space Grotesk, sans-serif" }}
-                    >
-                      {o.nom}
-                    </p>
-                    <p className="mt-0.5 text-[12.5px] text-[#616161]">
-                      {fcfa(o.prix)}
-                    </p>
-                  </div>
-                  <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-                      actif
-                        ? "border-[#003c33] bg-[#003c33] text-white"
-                        : "border-[#d9d9dd]"
-                    }`}
-                  >
-                    {actif && <Check size={14} strokeWidth={3} />}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <ul className="mt-5 space-y-3">{plats.map(carte)}</ul>
+
+        {accompagnements.length > 0 && (
+          <>
+            {plats.length > 0 && <hr className="my-5 border-0 border-t border-[#d9d9dd]" />}
+            <ul className="space-y-3">{accompagnements.map(carte)}</ul>
+          </>
+        )}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white to-transparent px-5 pb-6 pt-6">
-        <button
-          type="button"
-          disabled={!peutSuivre}
-          onClick={() => navigate("/reservation/quantite")}
-          className="w-full rounded-[32px] bg-[#17171c] px-6 py-3.5 text-[15px] font-semibold text-white disabled:opacity-40"
-        >
-          {t("suivant")}
-        </button>
-      </div>
+      <BottomCTA disabled={!choix} onClick={() => navigate("/reservation/quantite")}>
+        {t("suivant")}
+      </BottomCTA>
     </div>
   );
 }

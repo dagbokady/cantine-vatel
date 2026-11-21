@@ -1,94 +1,77 @@
-import { colors } from "../../utils/tokens";
-
-const RAYON_TABLE = 36;
-const RAYON_CHAISE = 13;
-const DISTANCE_CHAISE = 26;
+const LARGEUR = 335;
+const COLONNES = 2;
+const HAUTEUR_RANGEE = 128;
+const R_TABLE = 24;
+const R_CHAISE = 10;
+const DIST_CHAISE = R_TABLE + 8 + R_CHAISE;
+const R_TACTILE = 22;
 
 export default function PlanSalle({ salle, placeSelId, onSelect }) {
   if (!salle || !salle.tables.length) return null;
-  const vb = `0 0 ${salle.largeur} ${salle.hauteur}`;
+  const rangees = Math.ceil(salle.tables.length / COLONNES);
+  const hauteur = rangees * HAUTEUR_RANGEE;
+  const largeurCol = LARGEUR / COLONNES;
+
   return (
     <svg
-      viewBox={vb}
+      viewBox={`0 0 ${LARGEUR} ${hauteur}`}
       width="100%"
-      preserveAspectRatio="xMidYMid meet"
-      role="img"
+      role="group"
       aria-label="Plan de la salle"
-      style={{ display: "block", maxHeight: "60vh" }}
+      style={{ display: "block", background: "#ffffff" }}
     >
-      {salle.tables.map((t) => (
-        <g key={t.id}>
-          <circle
-            cx={t.x}
-            cy={t.y}
-            r={RAYON_TABLE}
-            fill={colors.surfaceSoft}
-            stroke={colors.hairline}
-            strokeWidth={1}
-          />
-          <text
-            x={t.x}
-            y={t.y + 4}
-            textAnchor="middle"
-            fontSize="12"
-            fontWeight="600"
-            fill={colors.muted}
-          >
-            {t.nom}
-          </text>
-          {t.places.map((p) => {
-            const theta = (p.angle * Math.PI) / 180;
-            const cx = t.x + (RAYON_TABLE + DISTANCE_CHAISE) * Math.cos(theta);
-            const cy = t.y + (RAYON_TABLE + DISTANCE_CHAISE) * Math.sin(theta);
-            const selectionnee = p.id === placeSelId;
-            const prise = p.etat === "prise";
-            let fill = colors.canvas;
-            let stroke = colors.ink;
-            let strokeWidth = 1.5;
-            if (prise) {
-              fill = colors.surfaceStrong;
-              stroke = colors.borderStrong;
-            }
-            if (selectionnee) {
-              fill = colors.primary;
-              stroke = colors.primary;
-              strokeWidth = 2;
-            }
-            return (
-              <g key={p.id}>
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={RAYON_CHAISE}
-                  fill={fill}
-                  stroke={stroke}
-                  strokeWidth={strokeWidth}
-                  style={{
-                    cursor: prise ? "not-allowed" : "pointer",
-                    transition: "fill 180ms ease, stroke 180ms ease",
-                  }}
-                  onClick={() => {
-                    if (!prise) onSelect(p);
-                  }}
-                />
-                {selectionnee && (
-                  <text
-                    x={cx}
-                    y={cy + 4}
-                    textAnchor="middle"
-                    fontSize="11"
-                    fontWeight="700"
-                    fill={colors.onPrimary}
-                    style={{ pointerEvents: "none" }}
-                  >
-                    {p.numero}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </g>
-      ))}
+      {salle.tables.map((t, i) => {
+        const tx = largeurCol * (i % COLONNES) + largeurCol / 2;
+        const ty = HAUTEUR_RANGEE * Math.floor(i / COLONNES) + HAUTEUR_RANGEE / 2;
+        const n = t.places.length || 1;
+        return (
+          <g key={t.id}>
+            <circle cx={tx} cy={ty} r={R_TABLE} fill="#eeece7" />
+            <text
+              x={tx}
+              y={ty + 4}
+              textAnchor="middle"
+              fontSize="12"
+              fontFamily="Inter, sans-serif"
+              fill="#93939f"
+            >
+              {t.nom}
+            </text>
+            {t.places.map((p, j) => {
+              // angle fourni par le serveur, sinon répartition régulière (360° / n)
+              const deg = Number.isFinite(p.angle) ? p.angle : (360 / n) * j - 90;
+              const a = (deg * Math.PI) / 180;
+              const cx = tx + DIST_CHAISE * Math.cos(a);
+              const cy = ty + DIST_CHAISE * Math.sin(a);
+              const prise = p.etat === "prise";
+              const sel = p.id === placeSelId;
+              const fill = sel ? "#003c33" : prise ? "#93939f" : "#ffffff";
+              const stroke = sel ? "#ffffff" : prise ? "none" : "#d9d9dd";
+              return (
+                <g
+                  key={p.id}
+                  role={prise ? undefined : "button"}
+                  aria-label={`${t.nom} place ${p.numero}${prise ? " (prise)" : ""}`}
+                  aria-pressed={prise ? undefined : sel}
+                  style={{ cursor: prise ? "default" : "pointer" }}
+                  onClick={prise ? undefined : () => onSelect(p)}
+                >
+                  {!prise && <circle cx={cx} cy={cy} r={R_TACTILE} fill="transparent" />}
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={R_CHAISE}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={sel ? 2 : 1.5}
+                    style={{ transition: "fill 150ms ease" }}
+                  />
+                </g>
+              );
+            })}
+          </g>
+        );
+      })}
     </svg>
   );
 }
