@@ -3,13 +3,14 @@ const LARGEUR = 340;
 const COLONNES = 2;
 const HAUTEUR_RANGEE = 156;
 const MARGE = 14;
+const BANDEAU = 34; // comptoir de service, repère d'orientation
 const R_TABLE = 30;
 const DIST_CHAISE = R_TABLE + 16;
 const R_TACTILE = 20;
 
 const COULEURS_CHAISE = {
-  libre: { fill: "#FBE3A1", stroke: "#D4A43C" },
-  prise: { fill: "#EBEBEB", stroke: "#B0B0B0" },
+  libre: { fill: "#FFFFFF", stroke: "#222222" },
+  prise: { fill: "#EBEBEB", stroke: "#D6D6D6" },
   sel: { fill: "#FF5A5F", stroke: "#D94449" },
 };
 
@@ -35,7 +36,7 @@ export function ChaiseIcone({ etat, size = 18 }) {
 export default function PlanSalle({ salle, placeSelId, onSelect }) {
   if (!salle || !salle.tables.length) return null;
   const rangees = Math.ceil(salle.tables.length / COLONNES);
-  const hauteur = rangees * HAUTEUR_RANGEE + MARGE * 2;
+  const hauteur = rangees * HAUTEUR_RANGEE + MARGE * 2 + BANDEAU;
   const largeurCol = LARGEUR / COLONNES;
 
   return (
@@ -46,20 +47,33 @@ export default function PlanSalle({ salle, placeSelId, onSelect }) {
       aria-label="Plan de la cantine"
       style={{ display: "block" }}
     >
+      <rect x={LARGEUR / 2 - 70} y={MARGE - 4} width="140" height="22" rx="11" fill="#222222" />
+      <text x={LARGEUR / 2} y={MARGE + 11} textAnchor="middle" fontSize="10" fontWeight="600" letterSpacing="1.4" fill="#FFFFFF" fontFamily="Inter, sans-serif">
+        COMPTOIR
+      </text>
       {salle.tables.map((t, i) => {
         const rangee = Math.floor(i / COLONNES);
         // quinconce légère : rangées impaires décalées pour un plan moins rigide
         const decal = rangee % 2 ? 10 : -10;
         const tx = largeurCol * (i % COLONNES) + largeurCol / 2 + decal;
-        const ty = MARGE + HAUTEUR_RANGEE * rangee + HAUTEUR_RANGEE / 2;
+        const ty = MARGE + BANDEAU + HAUTEUR_RANGEE * rangee + HAUTEUR_RANGEE / 2;
         const n = t.places.length || 1;
+        const libres = t.places.filter((p) => p.etat !== "prise").length;
+        const aMaPlace = t.places.some((p) => p.id === placeSelId);
         return (
-          <g key={t.id}>
+          <g key={t.id} opacity={libres === 0 ? 0.55 : 1}>
             <circle cx={tx} cy={ty + 2} r={R_TABLE} fill="#222222" opacity="0.06" />
-            <circle cx={tx} cy={ty} r={R_TABLE} fill="#FFFFFF" stroke="#EBEBEB" strokeWidth="1.5" />
+            <circle
+              cx={tx}
+              cy={ty}
+              r={R_TABLE}
+              fill={aMaPlace ? "#FFF0ED" : "#FFFFFF"}
+              stroke={aMaPlace ? "#FF5A5F" : "#EBEBEB"}
+              strokeWidth="1.5"
+            />
             <text
               x={tx}
-              y={ty + 5}
+              y={ty + 1}
               textAnchor="middle"
               fontSize="14"
               fontWeight="600"
@@ -67,6 +81,9 @@ export default function PlanSalle({ salle, placeSelId, onSelect }) {
               fill="#222222"
             >
               {t.nom}
+            </text>
+            <text x={tx} y={ty + 15} textAnchor="middle" fontSize="9" fill={libres ? "#717171" : "#B0B0B0"} fontFamily="Inter, sans-serif">
+              {libres ? `${libres} libre${libres > 1 ? "s" : ""}` : "complète"}
             </text>
             {t.places.map((p, j) => {
               // angle fourni par le serveur, sinon répartition régulière (360° / n)

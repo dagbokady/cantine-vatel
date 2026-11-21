@@ -6,3 +6,11 @@ export const ACCUEIL_ROLE = {
   admin: "/admin",
   enseignant: "/enseignant",
 };
+
+export const ROLE_LIBELLE = {
+  parent: "Espace parent",
+  agent: "Comptoir",
+  cuisine: "Cuisine",
+  admin: "Administration",
+  enseignant: "Espace enseignant",
+};

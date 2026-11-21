@@ -78,7 +78,7 @@ export function Avatar({ nom = "", photo, taille = 40 }) {
     .join("");
   return (
     <span
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#eeece7] font-medium text-[#212121]"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F7F7F7] font-medium text-[#222222]"
       style={{ width: taille, height: taille, fontSize: taille * 0.36 }}
     >
       {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> : initiales}

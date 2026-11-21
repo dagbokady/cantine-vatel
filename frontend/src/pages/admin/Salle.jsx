@@ -1,8 +1,39 @@
 import { useCallback, useEffect, useState } from "react";
+import { Accessibility, Trash2 } from "lucide-react";
 import { creerTable, erreurApi, getSalleAdmin, majPlace, supprimerTable } from "../../api/pro";
 import EspaceLayout, { Alerte, Bouton, Carte } from "../../components/EspaceLayout";
 import { Libelle } from "../../components/ui";
+import { titreStyle } from "../../utils/tokens";
 import { ONGLETS_ADMIN } from "./onglets";
+
+const champ = "mt-1.5 h-12 w-full rounded-[12px] border border-[#EBEBEB] bg-white px-3 text-[15px] outline-none focus:border-[#222222]";
+
+// Table ronde vue de dessus : chaque chaise bascule en place PMR.
+function TableRonde({ table, onToggle }) {
+  const n = table.places.length || 1;
+  const R = 37; // % du conteneur
+  return (
+    <div className="relative mx-auto aspect-square w-full max-w-[210px]">
+      <div className="absolute inset-[27%] flex flex-col items-center justify-center rounded-full border border-[#EBEBEB] bg-[#F7F7F7]">
+        <span className="text-[17px] font-semibold sm:text-[20px]" style={titreStyle}>{table.nom}</span>
+      </div>
+      {table.places.map((p, j) => {
+        const a = ((360 / n) * j - 90) * (Math.PI / 180);
+        return (
+          <button key={p.id} type="button" aria-pressed={p.pmr} onClick={() => onToggle(p)}
+            title={p.pmr ? "Place PMR" : "Place standard"}
+            aria-label={`${table.nom} place ${p.numero}${p.pmr ? " (PMR)" : ""}`}
+            className={`absolute flex h-9 w-9 -translate-x-1/2 sm:h-11 sm:w-11 -translate-y-1/2 items-center justify-center rounded-full text-[13px] font-medium transition-colors ${
+              p.pmr ? "bg-[#FF5A5F] text-white" : "border border-[#222222] bg-white text-[#222222] hover:bg-[#FFF0ED]"
+            }`}
+            style={{ left: `${50 + R * Math.cos(a)}%`, top: `${50 + R * Math.sin(a)}%` }}>
+            {p.pmr ? <Accessibility size={17} strokeWidth={2} /> : p.numero}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function Salle() {
   const [tables, setTables] = useState([]);
@@ -13,38 +44,39 @@ export default function Salle() {
   const faire = async (fn, ok) => {
     try { await fn(); await charger(); setMsg({ texte: ok, ok: true }); } catch (e) { setMsg({ texte: erreurApi(e), ok: false }); }
   };
+  const total = tables.reduce((s, t) => s + t.places.length, 0);
+  const pmr = tables.reduce((s, t) => s + t.places.filter((p) => p.pmr).length, 0);
 
   return (
-    <EspaceLayout titre="Plan de salle" onglets={ONGLETS_ADMIN} large>
-      <Carte>
+    <EspaceLayout titre="Plan de salle" surTitre={`${tables.length} tables · ${total} places · ${pmr} PMR`} onglets={ONGLETS_ADMIN} large>
+      <Carte className="border-transparent bg-[#F7F7F7]">
         <Libelle>Nouvelle table</Libelle>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <input value={f.nom} onChange={(e) => setF({ ...f, nom: e.target.value })} placeholder="T9" aria-label="Nom"
-            className="h-12 w-28 rounded-[12px] border border-[#d9d9dd] px-3 text-[15px]" />
-          <input type="number" min={1} max={12} value={f.nb_places} onChange={(e) => setF({ ...f, nb_places: Number(e.target.value) })} aria-label="Places"
-            className="h-12 w-24 rounded-[12px] border border-[#d9d9dd] px-3 text-[15px]" />
-          <Bouton variante="vert" disabled={!f.nom.trim()} onClick={() => faire(() => creerTable(f), "Table ajoutée.")}>Ajouter</Bouton>
+        <div className="mt-3 flex items-end gap-3">
+          <label className="min-w-0 flex-1 text-[13px] font-medium sm:w-28 sm:flex-none">Nom
+            <input value={f.nom} onChange={(e) => setF({ ...f, nom: e.target.value })} placeholder="T9" className={champ} />
+          </label>
+          <label className="w-24 text-[13px] font-medium">Places
+            <input type="number" min={1} max={12} value={f.nb_places} onChange={(e) => setF({ ...f, nb_places: Number(e.target.value) })} className={champ} />
+          </label>
+          <Bouton disabled={!f.nom.trim()} onClick={() => faire(() => creerTable(f), "Table ajoutée.")}>Ajouter</Bouton>
         </div>
       </Carte>
       <div className="mt-4"><Alerte ok={msg.ok}>{msg.texte}</Alerte></div>
-      <p className="mt-4 text-[14px] text-[#616161]">Touchez une place pour la réserver aux personnes à mobilité réduite (PMR).</p>
-      <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <p className="mt-6 flex items-center gap-2 text-[14px] text-[#717171]">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FF5A5F] text-white"><Accessibility size={13} /></span>
+        Touchez une chaise pour la réserver aux personnes à mobilité réduite.
+      </p>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {tables.map((t) => (
-          <Carte key={t.id} className="border-[#f2f2f2]">
-            <div className="flex items-center justify-between">
-              <p className="text-[16px] font-medium">{t.nom}</p>
-              <button type="button" className="min-h-12 text-[13px] text-[#b30000] underline" onClick={() => faire(() => supprimerTable(t.id), "Table supprimée.")}>Supprimer</button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {t.places.map((p) => (
-                <button key={p.id} type="button" aria-pressed={p.pmr} onClick={() => faire(() => majPlace(p.id, !p.pmr), "Place mise à jour.")}
-                  className={`h-12 w-12 rounded-full text-[14px] ${p.pmr ? "bg-[#003c33] text-white" : "border border-[#d9d9dd]"}`}
-                  title={p.pmr ? "Place PMR" : "Place standard"}>
-                  {p.pmr ? "♿" : p.numero}
-                </button>
-              ))}
-            </div>
-          </Carte>
+          <div key={t.id} className="relative rounded-[22px] border border-[#EBEBEB] p-2 sm:p-4">
+            <button type="button" aria-label={`Supprimer ${t.nom}`}
+              className="absolute right-1 top-1 z-[1] flex h-10 w-10 items-center justify-center rounded-full text-[#717171] transition-colors hover:bg-[#FFF0ED] hover:text-[#B30000]"
+              onClick={() => faire(() => supprimerTable(t.id), "Table supprimée.")}>
+              <Trash2 size={17} strokeWidth={1.75} />
+            </button>
+            <TableRonde table={t} onToggle={(p) => faire(() => majPlace(p.id, !p.pmr), "Place mise à jour.")} />
+          </div>
         ))}
       </div>
     </EspaceLayout>

@@ -176,6 +176,7 @@ def menu_semaine(debut: _date | None = None, _: User = Depends(parent_dep), db: 
                 prix=m.prix,
                 ingredients=ings.get(p.id, []),
                 allergenes=sorted({a for _, a in algs.get(p.id, [])}),
+                photo=p.photo,
             )
         )
     return [JourMenu(date=d, plats=pl) for d, pl in jours.items()]

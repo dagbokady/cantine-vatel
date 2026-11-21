@@ -76,6 +76,7 @@ class PlatMenu(BaseModel):
     prix: int
     ingredients: list[str]
     allergenes: list[str]
+    photo: str | None = None
 
 
 class JourMenu(BaseModel):
