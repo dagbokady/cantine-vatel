@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me"
     cors_origins: str = "http://localhost:5173"
     ticket_signing_key: str = ""  # Ed25519 PEM privée (PKCS8 non chiffré)
+    # Comptoir : refuser un ticket hors de son créneau (désactivable pour une démo).
+    comptoir_controle_creneau: bool = True
 
     @property
     def cors_origins_list(self) -> list[str]:

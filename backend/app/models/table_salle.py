@@ -1,4 +1,4 @@
-from sqlalchemy import Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -22,3 +22,4 @@ class Place(Base):
     table_id: Mapped[int] = mapped_column(ForeignKey("tables.id", ondelete="CASCADE"))
     numero: Mapped[int] = mapped_column(Integer)
     angle: Mapped[float] = mapped_column(Float)  # degrés, position autour de la table
+    pmr: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

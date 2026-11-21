@@ -15,7 +15,8 @@ class Eleve(Base):
     nom: Mapped[str] = mapped_column(String(120))
     classe: Mapped[str] = mapped_column(String(32))
     photo: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    pin_hash: Mapped[str] = mapped_column(String(255))
+    pin_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)  # None = PIN à choisir
+    regime: Mapped[str | None] = mapped_column(String(80), nullable=True)
     allergies: Mapped[list[str]] = mapped_column(ARRAY(String), server_default="{}")
     solde: Mapped[int] = mapped_column(Integer, default=0)  # FCFA
     parent_id: Mapped[int | None] = mapped_column(

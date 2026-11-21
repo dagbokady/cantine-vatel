@@ -35,8 +35,8 @@ from ..schemas.eleve import (
     TableSalleLite,
 )
 from ..services.eleve import commandes_ouvertes, options_menu_du_jour
-from ..services.reservations import creer_reservation
-from ..services.tickets import sign_ticket
+from ..services.reservations import annuler_reservation, creer_reservation
+from ..services.tickets import ticket_pour
 
 router = APIRouter(prefix="/eleve", tags=["eleve"])
 
@@ -95,6 +95,10 @@ def creneaux(
     ).all()
     occupe = {cid: n for cid, n in occ_rows}
 
+    # Créneaux déjà commencés : plus réservables (R5).
+    maintenant = datetime.now()
+    if jour == maintenant.date():
+        rows = [c for c in rows if c.heure_debut > maintenant.time()]
     items = [
         CreneauDispo(
             id=c.id,
@@ -190,19 +194,7 @@ def post_reservation(
         )
 
     db.refresh(reservation)
-    ticket = sign_ticket(
-        {
-            "reservation_id": reservation.id,
-            "eleve_id": eleve.id,
-            "matricule": eleve.matricule,
-            "menu_jour_id": reservation.menu_jour_id,
-            "creneau_id": reservation.creneau_id,
-            "place_id": reservation.place_id,
-            "tiers": reservation.tiers,
-            "prix": reservation.prix,
-            "iat": int(reservation.created_at.timestamp()),
-        }
-    )
+    ticket = ticket_pour(reservation, eleve, _date.today())
     return ReservationCreated(
         id=reservation.id,
         menu_jour_id=reservation.menu_jour_id,
@@ -237,8 +229,12 @@ def reservation_du_jour(
     ).first()
     if row is None:
         return None
-    res, _menu, plat, creneau, place, table = row
+    res, menu, plat, creneau, place, table = row
+    _, params = commandes_ouvertes(db, datetime.now())
     return ReservationDuJourResponse(
+        ticket=ticket_pour(res, eleve, menu.date),
+        annulable=res.statut == "commandee" and datetime.now().time() < params.cloture_commandes,
+        cloture_commandes=params.cloture_commandes,
         id=res.id,
         menu_jour_id=res.menu_jour_id,
         plat_nom=plat.nom,
@@ -297,3 +293,13 @@ def historique(
         for t in tx_rows
     ]
     return HistoriqueResponse(reservations=reservations, transactions=transactions)
+
+
+@router.delete("/reservations/{reservation_id}", status_code=204)
+def delete_reservation(
+    reservation_id: int,
+    eleve: Eleve = Depends(get_current_eleve),
+    db: Session = Depends(get_db),
+):
+    annuler_reservation(db, eleve, reservation_id, datetime.now())
+    db.commit()

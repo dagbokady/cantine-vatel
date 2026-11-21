@@ -9,6 +9,8 @@ export default function Accueil() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const [version, setVersion] = useState(0);
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -28,7 +30,7 @@ export default function Accueil() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [version]);
 
   if (loading) {
     return (
@@ -50,7 +52,13 @@ export default function Accueil() {
   const { me, menu, reservation } = data;
 
   if (reservation) {
-    return <EcranReservationEnCours me={me} reservation={reservation} />;
+    return (
+      <EcranReservationEnCours
+        me={me}
+        reservation={reservation}
+        onAnnulee={() => setVersion((v) => v + 1)}
+      />
+    );
   }
 
   const menuVide = menu.compatibles.length === 0 && menu.incompatibles.length === 0;

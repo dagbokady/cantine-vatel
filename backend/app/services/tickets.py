@@ -47,3 +47,36 @@ def sign_ticket(payload: dict) -> str:
     body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
     sig = _private_key().sign(body)
     return f"{_b64url(body)}.{_b64url(sig)}"
+
+
+def ticket_pour(reservation, eleve, menu_date) -> str:
+    """Ticket QR signé : commande, élève, date, créneau, place, plat, portion."""
+    return sign_ticket(
+        {
+            "reservation_id": reservation.id,
+            "eleve_id": eleve.id,
+            "matricule": eleve.matricule,
+            "date": menu_date.isoformat(),
+            "menu_jour_id": reservation.menu_jour_id,
+            "creneau_id": reservation.creneau_id,
+            "place_id": reservation.place_id,
+            "tiers": reservation.tiers,
+            "prix": reservation.prix,
+            "iat": int(reservation.created_at.timestamp()),
+        }
+    )
+
+
+def _b64url_decode(s: str) -> bytes:
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+def verify_ticket(ticket: str) -> dict | None:
+    """Retourne le payload si la signature est valide, sinon None."""
+    try:
+        body_b64, sig_b64 = ticket.strip().split(".")
+        body = _b64url_decode(body_b64)
+        _private_key().public_key().verify(_b64url_decode(sig_b64), body)
+        return json.loads(body)
+    except Exception:
+        return None

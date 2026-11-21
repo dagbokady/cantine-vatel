@@ -1,9 +1,8 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ReservationProvider } from "./hooks/useReservation";
 import { I18nProvider } from "./utils/i18n";
 import RequireAuth from "./components/RequireAuth";
-import BottomNav from "./components/BottomNav";
 import Login from "./pages/eleve/Login";
 import Accueil from "./pages/eleve/Accueil";
 import Profil from "./pages/eleve/Profil";
@@ -11,18 +10,24 @@ import Reservation from "./pages/eleve/Reservation";
 import Quantite from "./pages/eleve/Quantite";
 import Horaire from "./pages/eleve/Horaire";
 import Place from "./pages/eleve/Place";
+import Connexion from "./pages/pro/Connexion";
+import Comptoir from "./pages/agent/Comptoir";
+import ParentAccueil from "./pages/parent/ParentAccueil";
+import AjouterEnfant from "./pages/parent/AjouterEnfant";
+import Enfant from "./pages/parent/Enfant";
+import MenuSemaine from "./pages/parent/MenuSemaine";
+import Notifications from "./pages/parent/Notifications";
+import FicheCuisine from "./pages/cuisine/FicheCuisine";
+import Menus from "./pages/cuisine/Menus";
+import Plats from "./pages/cuisine/Plats";
+import Ingredients from "./pages/cuisine/Ingredients";
+import TableauDeBord from "./pages/admin/TableauDeBord";
+import Creneaux from "./pages/admin/Creneaux";
+import Salle from "./pages/admin/Salle";
+import Parametres from "./pages/admin/Parametres";
+import Appel from "./pages/enseignant/Appel";
 
-function Layout({ children }) {
-  const { pathname } = useLocation();
-  const sansNav =
-    pathname === "/login" || pathname === "/" || pathname === "/profil" || pathname.startsWith("/reservation");
-  return (
-    <>
-      {children}
-      {!sansNav && <BottomNav />}
-    </>
-  );
-}
+const R = (roles, el) => <RequireAuth roles={roles}>{el}</RequireAuth>;
 
 export default function App() {
   return (
@@ -30,7 +35,6 @@ export default function App() {
       <AuthProvider>
         <ReservationProvider>
           <BrowserRouter>
-            <Layout>
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route
@@ -81,9 +85,24 @@ export default function App() {
                     </RequireAuth>
                   }
                 />
+                <Route path="/pro" element={<Connexion />} />
+                <Route path="/comptoir" element={R(["agent", "admin"], <Comptoir />)} />
+                <Route path="/parent" element={R(["parent"], <ParentAccueil />)} />
+                <Route path="/parent/ajouter" element={R(["parent"], <AjouterEnfant />)} />
+                <Route path="/parent/enfant/:id" element={R(["parent"], <Enfant />)} />
+                <Route path="/parent/menu" element={R(["parent"], <MenuSemaine />)} />
+                <Route path="/parent/notifications" element={R(["parent"], <Notifications />)} />
+                <Route path="/cuisine" element={R(["cuisine", "admin"], <FicheCuisine />)} />
+                <Route path="/cuisine/menus" element={R(["cuisine", "admin"], <Menus />)} />
+                <Route path="/cuisine/plats" element={R(["cuisine", "admin"], <Plats />)} />
+                <Route path="/cuisine/ingredients" element={R(["cuisine", "admin"], <Ingredients />)} />
+                <Route path="/admin" element={R(["admin"], <TableauDeBord />)} />
+                <Route path="/admin/creneaux" element={R(["admin"], <Creneaux />)} />
+                <Route path="/admin/salle" element={R(["admin"], <Salle />)} />
+                <Route path="/admin/parametres" element={R(["admin"], <Parametres />)} />
+                <Route path="/enseignant" element={R(["enseignant"], <Appel />)} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-            </Layout>
           </BrowserRouter>
         </ReservationProvider>
       </AuthProvider>

@@ -28,6 +28,7 @@ from ..models import (
     Transaction,
 )
 from ..utils.prix import prix_portion
+from .notifications import notifier, notifier_solde
 
 
 def _conflit(msg: str) -> HTTPException:
@@ -61,8 +62,7 @@ def creer_reservation(
     params = db.get(Parametres, 1)
     if params is None:
         raise _conflit("Paramètres indisponibles.")
-    if now.time() >= params.cloture_commandes:
-        raise _conflit("Les commandes sont fermées pour aujourd'hui.")
+    apres_cloture = now.time() >= params.cloture_commandes  # R5 : stock restant, avant le créneau
 
     today = _date.today()
 
@@ -111,6 +111,8 @@ def creer_reservation(
     ).scalar_one_or_none()
     if creneau is None or creneau.date != today:
         raise _conflit("Créneau indisponible.")
+    if apres_cloture and now.time() >= creneau.heure_debut:
+        raise _conflit("Ce créneau a déjà commencé : choisis un créneau plus tard.")
     occ = db.execute(
         select(Reservation.id).where(
             Reservation.creneau_id == creneau.id,
@@ -136,6 +138,8 @@ def creer_reservation(
     if prise is not None:
         raise _conflit("Cette place vient d'être prise, choisis-en une autre.")
 
+    if eleve.solde < 0:
+        raise _conflit("Ton solde est négatif : demande à ton parent de recharger.")
     prix = prix_portion(menu.prix, tiers)
     solde_apres = eleve.solde - prix
     if solde_apres < -params.decouvert_max:
@@ -163,6 +167,56 @@ def creer_reservation(
             libelle=f"Réservation {plat.nom} ({tiers}/3)",
         )
     )
+    notifier(
+        db,
+        eleve,
+        f"{eleve.nom.split()[0]} a commandé {plat.nom} ({tiers}/3) pour "
+        f"{creneau.heure_debut.strftime('%H h %M')}.",
+    )
+    notifier_solde(db, eleve)
 
     db.flush()
     return reservation
+
+
+def annuler_reservation(
+    db: Session, eleve: Eleve, reservation_id: int, now: datetime
+) -> Reservation:
+    """Annule, rembourse, rend le stock et libère la place (R6 : avant la clôture)."""
+    params = db.get(Parametres, 1)
+    if params is None:
+        raise _conflit("Paramètres indisponibles.")
+
+    db.execute(select(Eleve).where(Eleve.id == eleve.id).with_for_update()).scalar_one()
+    res = db.execute(
+        select(Reservation)
+        .where(Reservation.id == reservation_id, Reservation.eleve_id == eleve.id)
+        .with_for_update()
+    ).scalar_one_or_none()
+    if res is None:
+        raise HTTPException(status_code=404, detail="Réservation introuvable.")
+    if res.statut != "commandee":
+        raise _conflit("Cette réservation ne peut plus être annulée.")
+
+    menu = db.execute(
+        select(MenuJour).where(MenuJour.id == res.menu_jour_id).with_for_update()
+    ).scalar_one()
+    if menu.date != now.date() or now.time() >= params.cloture_commandes:
+        raise _conflit(
+            f"Annulation impossible après {params.cloture_commandes.strftime('%H h %M')}."
+        )
+
+    plat = db.get(Plat, menu.plat_id)
+    menu.stock_restant += res.tiers
+    eleve.solde += res.prix
+    res.statut = "annulee"
+    db.add(
+        Transaction(
+            eleve_id=eleve.id,
+            type="remboursement",
+            montant=res.prix,
+            libelle=f"Annulation {plat.nom if plat else ''} ({res.tiers}/3)".strip(),
+        )
+    )
+    db.flush()
+    return res

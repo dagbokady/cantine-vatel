@@ -115,6 +115,9 @@ class ReservationDuJourResponse(BaseModel):
     statut: str
     creneau: CreneauLite
     place: PlaceLite
+    ticket: str
+    annulable: bool
+    cloture_commandes: time
 
 
 class HistoriqueReservation(BaseModel):

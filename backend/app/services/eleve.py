@@ -4,10 +4,11 @@ from __future__ import annotations
 from datetime import date as _date
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..models import (
+    Creneau,
     Allergene,
     Ingredient,
     IngredientAllergene,
@@ -104,6 +105,9 @@ def commandes_ouvertes(db: Session, now: datetime) -> tuple[bool, "Parametres"]:
     params = db.get(Parametres, 1)
     if params is None:
         return False, None  # type: ignore[return-value]
-    # Clôture = heure limite le jour même. Ouvert si l'heure actuelle < clôture.
-    ouverte = now.time() < params.cloture_commandes
-    return ouverte, params
+    # R5 : clôture principale (fiche cuisine figée), puis commande encore possible
+    # dans la limite du stock jusqu'au début du dernier créneau du jour.
+    if now.time() < params.cloture_commandes:
+        return True, params
+    dernier = db.scalar(select(func.max(Creneau.heure_debut)).where(Creneau.date == now.date()))
+    return (dernier is not None and now.time() < dernier), params

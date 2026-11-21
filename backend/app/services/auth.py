@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..models import Eleve
+from ..models import Eleve, User
 
 _hasher = PasswordHash((BcryptHasher(),))
 
@@ -41,8 +41,21 @@ def decode_token(token: str) -> dict:
 
 def authenticate_eleve(db: Session, matricule: str, pin: str) -> Eleve | None:
     eleve = db.scalars(select(Eleve).where(Eleve.matricule == matricule)).first()
-    if eleve is None:
+    if eleve is None or eleve.pin_hash is None:
         return None
     if not verify_pin(pin, eleve.pin_hash):
         return None
     return eleve
+
+
+def create_user_token(user: User) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {"sub": str(user.id), "role": user.role, "iat": now, "exp": now + TOKEN_LIFETIME}
+    return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
+
+
+def authenticate_user(db: Session, identifiant: str, secret: str) -> User | None:
+    user = db.scalars(select(User).where(User.identifiant == identifiant.strip().lower())).first()
+    if user is None or not verify_pin(secret, user.secret_hash):
+        return None
+    return user

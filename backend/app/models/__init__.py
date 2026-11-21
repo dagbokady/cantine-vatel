@@ -9,6 +9,9 @@ from .table_salle import TableSalle, Place
 from .reservation import Reservation
 from .transaction import Transaction
 from .parametres import Parametres
+from .classe import Classe, Niveau
+from .notification import Notification
+from .appel import Appel, Presence
 
 __all__ = [
     "User",
@@ -25,4 +28,9 @@ __all__ = [
     "Reservation",
     "Transaction",
     "Parametres",
+    "Classe",
+    "Niveau",
+    "Notification",
+    "Appel",
+    "Presence",
 ]

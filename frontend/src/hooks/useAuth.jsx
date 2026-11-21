@@ -6,12 +6,14 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    const u = JSON.parse(stored);
+    return { role: "eleve", ...u };
   });
 
   const ouvrirSession = useCallback((data) => {
     localStorage.setItem("token", data.access_token);
-    const u = { nom: data.nom, matricule: data.matricule };
+    const u = { nom: data.nom, matricule: data.matricule, role: data.role || "eleve" };
     localStorage.setItem("user", JSON.stringify(u));
     setUser(u);
     return data;
@@ -29,6 +31,20 @@ export function AuthProvider({ children }) {
     [ouvrirSession],
   );
 
+  const loginUser = useCallback(
+    async (identifiant, mot_de_passe) =>
+      ouvrirSession((await api.post("/auth/user/login", { identifiant, mot_de_passe })).data),
+    [ouvrirSession],
+  );
+
+  const inscrireParent = useCallback(
+    async (nom, identifiant, mot_de_passe) =>
+      ouvrirSession(
+        (await api.post("/auth/parent/register", { nom, identifiant, mot_de_passe })).data,
+      ),
+    [ouvrirSession],
+  );
+
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -36,7 +52,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, choisirPin, logout }}>
+    <AuthContext.Provider value={{ user, login, choisirPin, loginUser, inscrireParent, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,106 +1,163 @@
 import { useEffect, useState } from "react";
-import { MapPin, Clock } from "lucide-react";
-import { useI18n } from "../../utils/i18n";
+import { useNavigate } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
+import { UtensilsCrossed } from "lucide-react";
+import { annulerReservation } from "../../api/eleve";
+import { useReservation } from "../../hooks/useReservation";
 import { fcfa, formatHeure, tiersEnFraction } from "../../utils/format";
+import { titreStyle } from "../../utils/tokens";
+import { Avatar, Libelle } from "../ui";
 
-function secondesJusquA(creneauHeureDebut) {
-  const [h, m] = creneauHeureDebut.split(":").map(Number);
-  const now = new Date();
+function secondesJusquA(hhmmss) {
+  const [h, m] = hhmmss.split(":").map(Number);
   const cible = new Date();
   cible.setHours(h, m, 0, 0);
-  return Math.max(0, Math.floor((cible - now) / 1000));
+  return Math.max(0, Math.floor((cible - Date.now()) / 1000));
 }
 
-function formatCompte(sec) {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  const pad = (n) => n.toString().padStart(2, "0");
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-}
+const mmss = (sec) =>
+  `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
 
-export default function EcranReservationEnCours({ me, reservation }) {
-  const { t } = useI18n();
-  const [sec, setSec] = useState(() =>
-    secondesJusquA(reservation.creneau.heure_debut),
+function Ligne({ label, valeur }) {
+  return (
+    <div className="flex items-center justify-between py-2.5">
+      <span className="text-[14px] text-[#616161]">{label}</span>
+      <span className="text-[15px] font-medium text-[#212121]">{valeur}</span>
+    </div>
   );
+}
+
+export default function EcranReservationEnCours({ me, reservation, onAnnulee }) {
+  const navigate = useNavigate();
+  const { reset } = useReservation();
+  const debut = reservation.creneau.heure_debut;
+  const [sec, setSec] = useState(() => secondesJusquA(debut));
+  const [confirmer, setConfirmer] = useState(false);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
 
   useEffect(() => {
-    const id = setInterval(
-      () => setSec(secondesJusquA(reservation.creneau.heure_debut)),
-      1000,
-    );
+    const id = setInterval(() => setSec(secondesJusquA(debut)), 1000);
     return () => clearInterval(id);
-  }, [reservation.creneau.heure_debut]);
+  }, [debut]);
+
+  const servie = reservation.statut === "servie";
+  const cloture = formatHeure(reservation.cloture_commandes);
+
+  const annuler = async () => {
+    if (!confirmer) return setConfirmer(true);
+    setEnvoi(true);
+    setErreur("");
+    try {
+      await annulerReservation(reservation.id);
+      reset();
+      onAnnulee();
+    } catch (e) {
+      setErreur(e.response?.data?.detail || "Annulation impossible.");
+      setConfirmer(false);
+    } finally {
+      setEnvoi(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-white pb-28">
-      <header className="bg-[#003c33] px-5 pb-6 pt-14 text-white">
-        <p className="text-[13px] text-white/70">
-          {t("bonjour")}, {me.nom.split(" ")[0]}
+    <div className="min-h-screen bg-white px-5 pb-[calc(32px+env(safe-area-inset-bottom))]">
+      <header className="flex items-center justify-between pt-3">
+        <p className="text-[16px] text-[#616161]">
+          Crédit : <span className="font-medium text-[#212121]">{fcfa(me.solde)}</span>
         </p>
-        <h1
-          className="mt-1 text-[26px] font-bold leading-tight"
-          style={{ fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.03em" }}
-        >
-          {t("ma_reservation")}
-        </h1>
-      </header>
-
-      <main className="px-5 pt-6">
-        <section className="rounded-[22px] bg-[#eeece7] p-6 text-center">
-          <p className="text-[12px] uppercase tracking-wide text-[#616161]">
-            {t("creneau")} {formatHeure(reservation.creneau.heure_debut)}
-          </p>
-          <p
-            className="mt-2 text-[44px] font-bold leading-none text-[#17171c] tabular-nums"
-            style={{ fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.03em" }}
-          >
-            {formatCompte(sec)}
-          </p>
-          <p className="mt-2 text-[12px] text-[#93939f]">
-            {sec > 0 ? "Avant ton créneau" : "C'est l'heure !"}
-          </p>
-        </section>
-
-        <section className="mt-5 rounded-[22px] border border-[#f2f2f2] p-5">
-          <h2
-            className="text-[18px] font-semibold text-[#212121]"
-            style={{ fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.02em" }}
-          >
-            {reservation.plat_nom}
-          </h2>
-          <div className="mt-3 flex items-center justify-between text-[13px] text-[#616161]">
-            <span>
-              {t("portion")} {tiersEnFraction(reservation.tiers)}
-            </span>
-            <span className="font-semibold text-[#212121]">
-              {fcfa(reservation.prix)}
-            </span>
-          </div>
-          <div className="mt-4 flex items-center gap-4 border-t border-[#f2f2f2] pt-4 text-[13px] text-[#616161]">
-            <span className="inline-flex items-center gap-1.5">
-              <Clock size={15} />
-              {formatHeure(reservation.creneau.heure_debut)}–
-              {formatHeure(reservation.creneau.heure_fin)}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin size={15} />
-              {reservation.place.table_nom} · n°{reservation.place.numero}
-            </span>
-          </div>
-        </section>
-      </main>
-
-      <div className="fixed inset-x-0 bottom-[64px] z-10 bg-gradient-to-t from-white via-white to-transparent px-5 pb-4 pt-6">
         <button
           type="button"
-          disabled
-          className="w-full rounded-[32px] bg-[#eeece7] px-6 py-3.5 text-[15px] font-semibold text-[#93939f]"
+          onClick={() => navigate("/profil")}
+          aria-label="Profil"
+          className="-mr-1 flex h-12 w-12 items-center justify-center"
         >
-          {t("annuler_reservation")} · {t("bientot")}
+          <Avatar nom={me.nom} photo={me.photo} />
         </button>
+      </header>
+
+      <h1 className="mt-4 text-[28px] font-medium text-[#212121]" style={titreStyle}>
+        Ma réservation
+      </h1>
+
+      <div className="mt-6 overflow-hidden rounded-[22px] bg-[#eeece7]" style={{ aspectRatio: "4/3" }}>
+        {reservation.plat_photo ? (
+          <img src={reservation.plat_photo} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <UtensilsCrossed size={48} strokeWidth={1.25} className="text-[#93939f]" />
+          </div>
+        )}
       </div>
+
+      <p className="mt-4 text-[18px] font-medium text-[#212121]">{reservation.plat_nom}</p>
+
+      <section className="mt-2 divide-y divide-[#f2f2f2]">
+        <Ligne label="Portion" valeur={`${tiersEnFraction(reservation.tiers)} · ${fcfa(reservation.prix)}`} />
+        <Ligne
+          label="Créneau"
+          valeur={`${formatHeure(debut)} – ${formatHeure(reservation.creneau.heure_fin)}`}
+        />
+        <Ligne
+          label="Place"
+          valeur={`Table ${reservation.place.table_nom.replace(/^T/, "")} · place ${reservation.place.numero}`}
+        />
+      </section>
+
+      <section className="mt-6 rounded-[16px] bg-[#003c33] px-5 py-6 text-center text-white">
+        {servie ? (
+          <p className="text-[24px] font-medium" style={titreStyle}>Bon appétit !</p>
+        ) : sec > 0 ? (
+          <>
+            <p className="text-[13px] text-white/70">Ton créneau commence dans</p>
+            <p className="mt-1 text-[44px] font-medium tabular-nums" style={titreStyle}>
+              {mmss(sec)}
+            </p>
+          </>
+        ) : (
+          <p className="text-[28px] font-medium" style={titreStyle}>C'est l'heure</p>
+        )}
+      </section>
+
+      {!servie && (
+        <section className="mt-6 flex flex-col items-center">
+          <Libelle>Ton ticket</Libelle>
+          <div className="mt-3 rounded-[16px] border border-[#f2f2f2] bg-white p-4">
+            <QRCodeSVG value={reservation.ticket} size={220} level="M" />
+          </div>
+          <p className="mt-2 text-[13px] text-[#93939f]">Montre-le au comptoir</p>
+        </section>
+      )}
+
+      {erreur && (
+        <p role="alert" className="mt-6 bg-[#fff1f1] px-4 py-3 text-[14px] text-[#b30000]">
+          {erreur}
+        </p>
+      )}
+
+      {!servie && (
+        <div className="mt-8">
+          <button
+            type="button"
+            onClick={annuler}
+            disabled={!reservation.annulable || envoi}
+            className={`h-[52px] w-full rounded-[32px] text-[16px] font-medium transition-colors disabled:bg-[#eeece7] disabled:text-[#93939f] ${
+              confirmer ? "bg-[#b30000] text-white" : "border border-[#d9d9dd] bg-white text-[#212121]"
+            }`}
+          >
+            {envoi
+              ? "Annulation…"
+              : confirmer
+                ? `Confirmer : remboursement de ${fcfa(reservation.prix)}`
+                : "Annuler la réservation"}
+          </button>
+          <p className="mt-2 text-center text-[13px] text-[#93939f]">
+            {reservation.annulable
+              ? `Annulation remboursée jusqu'à ${cloture}.`
+              : `Annulation impossible après ${cloture} : la cuisine prépare déjà ton repas.`}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

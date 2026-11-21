@@ -1,20 +1,13 @@
 import { useRef } from "react";
 import { prixPortion, fcfa, tiersEnFraction } from "../../utils/format";
 import { titreStyle } from "../../utils/tokens";
+import AssietteRiz from "./AssietteRiz";
 
 const TIERS = [1, 2, 3];
-const TAILLE = 220;
-const C = TAILLE / 2;
-const R_ASSIETTE = C - 1; // liseré 2 px
-const R_PLEIN = R_ASSIETTE - 10; // 3/3 : couvre l’assiette sans déborder
-// Forme organique de rayon moyen ≈ 100 centrée en 0,0.
-const BLOB =
-  "M0,-100 C42,-102 84,-74 96,-32 C108,10 90,62 52,86 C16,108 -42,102 -72,74 C-104,44 -106,-8 -88,-46 C-70,-84 -42,-98 0,-100 Z";
 
 export default function PortionPicker({ plat, tiers, onChange }) {
   const piste = useRef(null);
   const glisse = useRef(false);
-  const echelle = (R_PLEIN / 100) * Math.sqrt(tiers / 3);
   const prix = plat ? prixPortion(plat.prix, tiers) : 0;
   const pos = ((tiers - 1) / 2) * 100;
 
@@ -27,23 +20,9 @@ export default function PortionPicker({ plat, tiers, onChange }) {
 
   return (
     <div className="flex w-full flex-col items-center">
-      <svg
-        viewBox={`0 0 ${TAILLE} ${TAILLE}`}
-        width={TAILLE}
-        height={TAILLE}
-        role="img"
-        aria-label={`Assiette remplie à ${tiersEnFraction(tiers)}`}
-      >
-        <circle cx={C} cy={C} r={R_ASSIETTE} fill="#ffffff" stroke="#d9d9dd" strokeWidth="2" />
-        <g
-          style={{
-            transform: `translate(${C}px, ${C}px) scale(${echelle})`,
-            transition: "transform 0.3s ease",
-          }}
-        >
-          <path d={BLOB} fill="#f5e6c8" />
-        </g>
-      </svg>
+      <div role="img" aria-label={`Assiette remplie à ${tiersEnFraction(tiers)}`}>
+        <AssietteRiz fraction={tiers / 3} />
+      </div>
 
       <p className="mt-4 text-[32px] font-medium text-[#212121]" style={titreStyle}>
         {fcfa(prix)}

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { titreStyle } from "../../utils/tokens";
 
@@ -67,7 +67,9 @@ export default function Login() {
     } catch (err) {
       const st = err.response?.status;
       setError(
-        st === 401 || st === 404
+        st === 409
+          ? err.response.data.detail
+          : st === 401 || st === 404
           ? premiere
             ? "Matricule inconnu"
             : "Matricule ou PIN incorrect"
@@ -136,6 +138,11 @@ export default function Login() {
             )}
           </div>
         </form>
+        <p className="text-center">
+          <Link to="/pro" className="inline-block min-h-12 py-3 text-[13px] text-[#616161] underline underline-offset-2">
+            Parent ou personnel ? Connecte-toi ici
+          </Link>
+        </p>
       </div>
     </div>
   );

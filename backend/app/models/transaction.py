@@ -14,6 +14,8 @@ class Transaction(Base):
     type: Mapped[str] = mapped_column(String(20))  # recharge, debit, remboursement
     montant: Mapped[int] = mapped_column(Integer)  # FCFA, signé (+ recharge, - debit)
     libelle: Mapped[str] = mapped_column(String(255))
+    statut: Mapped[str] = mapped_column(String(20), default="validee", server_default="validee")
+    reference_externe: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -17,7 +17,7 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !err.config?.url?.startsWith("/auth/")) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      window.location.href = window.location.pathname === "/" || window.location.pathname.startsWith("/reservation") || window.location.pathname === "/profil" ? "/login" : "/pro";
     }
     return Promise.reject(err);
   },

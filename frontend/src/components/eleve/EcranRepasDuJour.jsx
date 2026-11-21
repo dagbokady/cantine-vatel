@@ -9,7 +9,12 @@ export default function EcranRepasDuJour({ me, menu }) {
   const peutReserver =
     menu.commandes_ouvertes && menu.compatibles.some((o) => o.stock_restant >= 3);
 
-  const plat = menu.compatibles[0] || menu.incompatibles[0];
+  // Plat mis en avant : le plat principal (ou sa version sans allergène), jamais l'accompagnement.
+  const plat =
+    menu.compatibles.find((o) => o.type !== "accompagnement") ||
+    menu.compatibles[0] ||
+    menu.incompatibles[0];
+  const autres = menu.compatibles.filter((o) => o !== plat);
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)]">
@@ -108,7 +113,7 @@ export default function EcranRepasDuJour({ me, menu }) {
           )}
 
           {/* Other options */}
-          {menu.compatibles.length > 1 && (
+          {autres.length > 0 && (
             <div className="mt-8">
               <h3
                 className="text-[16px] font-semibold text-[var(--color-ink)]"
@@ -116,7 +121,7 @@ export default function EcranRepasDuJour({ me, menu }) {
               >
                 Autres options
               </h3>
-              {menu.compatibles.slice(1).map((o) => (
+              {autres.map((o) => (
                 <div
                   key={o.menu_jour_id}
                   className="mt-3 flex items-center gap-4 rounded-[var(--rounded-md)] bg-[var(--color-surface-soft)] p-4"

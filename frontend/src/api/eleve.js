@@ -23,3 +23,5 @@ export const getSalle = (creneau_id) =>
 
 export const postReservation = (payload) =>
   api.post("/eleve/reservations", payload).then((r) => r.data);
+
+export const annulerReservation = (id) => api.delete(`/eleve/reservations/${id}`);
