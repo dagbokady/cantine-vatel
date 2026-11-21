@@ -1,3 +1,5 @@
+import threading
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,6 +18,15 @@ from .services.tickets import public_key_pem
 async def lifespan(_app):
     """Base d'allergènes et d'ingrédients toujours présente (ajouts seulement).
     SEED_DEMO=true : données de démonstration si la base n'a encore aucun élève (jamais d'effacement d'une école en service)."""
+    if settings.seed_demo:
+        # En tâche de fond : le port s'ouvre tout de suite (Render abandonne un déploiement sans port ouvert).
+        threading.Thread(target=_preparer_base, name="preparation-base", daemon=True).start()
+    else:
+        _preparer_base()
+    yield
+
+
+def _preparer_base() -> None:
     from .db import SessionLocal
     from .referentiel import charger_referentiel
 
@@ -24,11 +35,15 @@ async def lifespan(_app):
             if settings.seed_demo:
                 from .seed import charger_demo_si_vide
 
-                charger_demo_si_vide(db)
+                debut = time.monotonic()
+                print("Démonstration : vérification de la base...", flush=True)
+                if charger_demo_si_vide(db):
+                    print(f"Démonstration chargée en {time.monotonic() - debut:.0f} s.", flush=True)
+                else:
+                    print("Démonstration non chargée : la base contient déjà des élèves.", flush=True)
             charger_referentiel(db)
     except Exception as exc:  # base non migrée : l'API démarre quand même
-        print(f"Référentiel non chargé : {exc}")
-    yield
+        print(f"Référentiel non chargé : {exc}", flush=True)
 
 
 settings.verifier_production()

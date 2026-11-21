@@ -6,6 +6,7 @@ Lancement :
 from __future__ import annotations
 
 import math
+from functools import lru_cache
 import random
 from datetime import date, datetime, time, timedelta
 
@@ -48,7 +49,9 @@ from .models import (
 _hasher = PasswordHash((BcryptHasher(),))
 
 
+@lru_cache(maxsize=None)
 def hash_pin(pin: str) -> str:
+    # Un seul hachage bcrypt par secret de démo : sur un petit serveur, chacun coûte plusieurs secondes.
     return _hasher.hash(pin)
 
 
@@ -357,7 +360,7 @@ def run(db: Session) -> None:
     # Comptes personnel
     comptes: dict[str, User] = {}
     for nom, ident, role in COMPTES:
-        u = User(nom=nom, identifiant=ident, secret_hash=_hasher.hash("motdepasse"), role=role)
+        u = User(nom=nom, identifiant=ident, secret_hash=hash_pin("motdepasse"), role=role)
         db.add(u)
         comptes[role] = u
     db.flush()
@@ -376,7 +379,7 @@ def run(db: Session) -> None:
     db.flush()
 
     # Deux cuisiniers : l'un en mode commande (collège, lycée), l'autre en mode classe (primaire)
-    cheffe = User(nom="Cheffe Adjoua", identifiant="cuisine.primaire@demo.ci", secret_hash=_hasher.hash("motdepasse"), role="cuisine")
+    cheffe = User(nom="Cheffe Adjoua", identifiant="cuisine.primaire@demo.ci", secret_hash=hash_pin("motdepasse"), role="cuisine")
     db.add(cheffe)
     db.flush()
     db.add_all([
@@ -389,7 +392,7 @@ def run(db: Session) -> None:
     parent_awa = User(
         nom="Kady Coulibaly",
         identifiant="parent.awa@demo.ci",
-        secret_hash=_hasher.hash("motdepasse"),
+        secret_hash=hash_pin("motdepasse"),
         role="parent",
     )
     db.add(parent_awa)
@@ -565,7 +568,7 @@ def demo_eleves(db, awa, eleve2, parent_awa, plats_by_name, creneaux, places, me
     parent2 = User(
         nom="Yao Kouadio Père",
         identifiant="parent.kouadio@demo.ci",
-        secret_hash=_hasher.hash("motdepasse"),
+        secret_hash=hash_pin("motdepasse"),
         role="parent",
     )
     db.add(parent2)
