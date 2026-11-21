@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000",
+  // Même hôte que la page : localhost sur le PC, IP du PC depuis un téléphone.
+  baseURL: `${window.location.protocol}//${window.location.hostname}:8000`,
   headers: { "Content-Type": "application/json" },
 });
 

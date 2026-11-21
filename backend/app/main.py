@@ -15,6 +15,8 @@ app = FastAPI(title="Cantine Vatel")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    # Réseau local (téléphone sur le même Wi-Fi que le PC de dev).
+    allow_origin_regex=r"http://(192\.168|10|172\.(1[6-9]|2\d|3[01]))(\.\d{1,3}){2,3}(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
