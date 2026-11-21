@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  UtensilsCrossed,
   ArrowRight,
   ShieldCheck,
   AlertCircle,
@@ -14,6 +13,7 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import { ACCUEIL_ROLE } from "../../utils/roles";
 import { titreStyle } from "../../utils/tokens";
+import { APP_LOGO, APP_NAME } from "../../config/app";
 import { Alerte, Bouton, Champ } from "../../components/EspaceLayout";
 
 export default function Connexion() {
@@ -72,11 +72,9 @@ export default function Connexion() {
         <section className="relative hidden min-h-screen overflow-hidden bg-[#FFF0ED] p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
 
           <div className="relative z-10 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FF5A5F] text-white">
-              <UtensilsCrossed size={23} />
-            </div>
+            <img src={APP_LOGO} alt="" className="h-11 w-11" />
             <span className="text-xl font-semibold text-[#222222]">
-            Cantine Vatel
+            {APP_NAME}
           </span>
           </div>
 
@@ -117,7 +115,7 @@ export default function Connexion() {
           </div>
 
           <p className="relative z-10 text-xs text-[#717171]">
-            © 2026 Cantine Vatel · Tous droits réservés
+            © 2026 {APP_NAME} · Tous droits réservés
           </p>
 
           <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full border-[50px] border-white/40" />
@@ -130,15 +128,13 @@ export default function Connexion() {
 
             {/* LOGO MOBILE */}
             <div className="mb-12 lg:hidden">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FF5A5F] text-white">
-                <UtensilsCrossed size={28} />
-              </div>
+              <img src={APP_LOGO} alt="" className="mx-auto h-16 w-16" />
 
               <h1
                   className="mt-4 text-center text-3xl font-semibold text-[#222222]"
                   style={titreStyle}
               >
-                Cantine Vatel
+                {APP_NAME}
               </h1>
             </div>
 
@@ -256,7 +252,7 @@ export default function Connexion() {
             </Link>
 
             <p className="mt-8 text-center text-xs text-[#B0B0B0]">
-              Un accès sécurisé à votre espace Cantine Vatel.
+              Un accès sécurisé à votre espace {APP_NAME}.
             </p>
           </div>
         </section>

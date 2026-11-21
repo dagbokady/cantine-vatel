@@ -42,11 +42,11 @@ def fiche_cuisine(db: Session, jour: _date) -> dict:
     rows = db.execute(
         select(Reservation, Eleve, Creneau, Place, TableSalle)
         .join(Eleve, Eleve.id == Reservation.eleve_id)
-        .join(Creneau, Creneau.id == Reservation.creneau_id)
-        .join(Place, Place.id == Reservation.place_id)
-        .join(TableSalle, TableSalle.id == Place.table_id)
+        .outerjoin(Creneau, Creneau.id == Reservation.creneau_id)
+        .outerjoin(Place, Place.id == Reservation.place_id)
+        .outerjoin(TableSalle, TableSalle.id == Place.table_id)
         .where(Reservation.menu_jour_id.in_(menu_ids or [-1]), Reservation.statut != "annulee")
-        .order_by(Creneau.heure_debut, Eleve.nom)
+        .order_by(Creneau.heure_debut.nulls_last(), Eleve.nom)
     ).all()
 
     par_menu: dict[int, dict] = {}
@@ -65,7 +65,7 @@ def fiche_cuisine(db: Session, jour: _date) -> dict:
         d = par_menu[r.menu_jour_id]
         d["commandes"] += 1
         d["tiers"] += r.tiers
-        cle = f"{c.heure_debut.strftime('%H:%M')}–{c.heure_fin.strftime('%H:%M')}"
+        cle = f"{c.heure_debut.strftime('%H:%M')}–{c.heure_fin.strftime('%H:%M')}" if c else "Vague à choisir"
         d["par_creneau"][cle]["commandes"] += 1
         d["par_creneau"][cle]["tiers"] += r.tiers
         d["par_classe"][e.classe]["commandes"] += 1
@@ -80,7 +80,7 @@ def fiche_cuisine(db: Session, jour: _date) -> dict:
                     "plat_nom": d["plat_nom"],
                     "portion": r.tiers,
                     "creneau": cle,
-                    "place": f"{t.nom} · {pl.numero}",
+                    "place": f"{t.nom} · {pl.numero}" if pl else None,
                 }
             )
 

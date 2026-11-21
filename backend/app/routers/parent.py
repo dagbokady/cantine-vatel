@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, select, update
 from sqlalchemy.orm import Session
 
+from ..services.scolarite import normaliser_matricule
 from ..deps import get_db, require_roles
 from ..models import Allergene, Eleve, MenuJour, Notification, Plat, Reservation, Transaction, User
 from ..schemas.parent import (
@@ -58,7 +59,7 @@ def enfants(parent: User = Depends(parent_dep), db: Session = Depends(get_db)):
 
 @router.get("/enfants/verifier", response_model=EnfantVerif)
 def verifier(matricule: str = Query(min_length=3), parent: User = Depends(parent_dep), db: Session = Depends(get_db)):
-    e = db.scalars(select(Eleve).where(Eleve.matricule == matricule.strip().upper())).first()
+    e = db.scalars(select(Eleve).where(Eleve.matricule == normaliser_matricule(matricule))).first()
     if e is None or (e.parent_id and e.parent_id != parent.id):
         raise HTTPException(status_code=404, detail="Matricule inconnu ou déjà rattaché.")
     return EnfantVerif(nom=e.nom, classe=e.classe)
@@ -67,7 +68,7 @@ def verifier(matricule: str = Query(min_length=3), parent: User = Depends(parent
 @router.post("/enfants", response_model=EnfantOut, status_code=201)
 def rattacher(body: RattacherRequest, parent: User = Depends(parent_dep), db: Session = Depends(get_db)):
     e = db.execute(
-        select(Eleve).where(Eleve.matricule == body.matricule.strip().upper()).with_for_update()
+        select(Eleve).where(Eleve.matricule == normaliser_matricule(body.matricule)).with_for_update()
     ).scalar_one_or_none()
     if e is None or (e.parent_id and e.parent_id != parent.id):
         raise HTTPException(status_code=409, detail="Matricule inconnu ou déjà rattaché.")

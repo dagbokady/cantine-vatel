@@ -32,6 +32,8 @@ def servir(db: Session, ticket: str, now: datetime) -> dict:
     if res is None or res.eleve_id != payload.get("eleve_id"):
         return {"ok": False, "raison": "Commande introuvable."}
 
+    if res.creneau_id is None or res.place_id is None:
+        return {"ok": False, "raison": "Vague non choisie pour cette commande."}
     eleve = db.get(Eleve, res.eleve_id)
     menu = db.get(MenuJour, res.menu_jour_id)
     plat = db.get(Plat, menu.plat_id)

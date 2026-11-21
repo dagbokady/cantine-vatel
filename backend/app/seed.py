@@ -229,6 +229,8 @@ def run(db: Session) -> None:
             ouverture_commandes=time(18, 0),
             cloture_commandes=time(10, 0),
             decouvert_max=1500,
+            delai_preparation_min=60,
+            heure_recreation=time(10, 0),
         )
     )
 
@@ -391,7 +393,7 @@ def run(db: Session) -> None:
 
     # Élève Awa (allergique à l'arachide)
     awa = Eleve(
-        matricule="LYC-2026-001",
+        matricule="12026001L",
         nom="Awa Coulibaly",
         classe="Terminale D",
         photo=None,
@@ -408,7 +410,7 @@ def run(db: Session) -> None:
     rnd = random.Random(42)
     autres: list[Eleve] = []
     for idx, nom in enumerate(NOMS_LYCEENS, start=2):
-        matricule = f"LYC-2026-{idx:03d}"
+        matricule = f"12026{idx:03d}L"
         allergies: list[str] = []
         # ~1 élève sur 6 a une allergie aléatoire
         if rnd.random() < 0.18:
@@ -442,7 +444,7 @@ def run(db: Session) -> None:
     for idx, nom in enumerate(NOMS_PRIMAIRE, start=1):
         db.add(
             Eleve(
-                matricule=f"PRI-2026-{idx:03d}",
+                matricule=f"22026{idx:03d}P",
                 nom=nom,
                 classe="CM2 A",
                 photo=None,
@@ -455,7 +457,7 @@ def run(db: Session) -> None:
     for idx, nom in enumerate(NOMS_CM1, start=1):
         db.add(
             Eleve(
-                matricule=f"PRI-2026-1{idx:02d}",
+                matricule=f"220261{idx:02d}P",
                 nom=nom,
                 classe="CM1 B",
                 pin_hash=None,
@@ -499,8 +501,8 @@ def run(db: Session) -> None:
     # Places occupées : (creneau_id, place_id)
     occupees: set[tuple[int, int]] = set()
 
-    # Aperçu complet pour LYC-2026-001 (Awa) et LYC-2026-002
-    eleve2 = next(e for e in autres if e.matricule == "LYC-2026-002")
+    # Aperçu complet pour 12026001L (Awa) et 12026002L
+    eleve2 = next(e for e in autres if e.matricule == "12026002L")
     demo_eleves(db, awa, eleve2, parent_awa, plats_by_name, creneaux, places, menu_by_type, occupees, today)
 
     commandants = rnd.sample([e for e in autres if e is not eleve2], 18)

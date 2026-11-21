@@ -1,206 +1,224 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowRight, Check, CheckCheck, ThumbsDown, ThumbsUp, X } from "lucide-react";
-import { envoyerRetours, erreurApi, getService, getVague } from "../../api/pro";
+import { AlertTriangle, ArrowRight, Check, CheckCheck, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { envoyerRetours, erreurApi, getSalleCuisine, getVague } from "../../api/pro";
 import EspaceLayout, { Alerte } from "../../components/EspaceLayout";
+import Panneau from "../../components/Panneau";
 import { Avatar } from "../../components/ui";
 import { tiersEnFraction } from "../../utils/format";
 import { titreStyle } from "../../utils/tokens";
-import { BarreProgression, ChoixVague, FicheEleve, Reglages } from "./commun";
+import { BarreProgression, ChoixVague, Reglages } from "./commun";
+import { CALQUES, useCalques } from "./calques";
 import { dateLongue, useReglages } from "./reglages";
+import { ChoixCalques, Plan } from "./Salle";
 import { ONGLETS_CUISINE } from "./onglets";
+import NotificationsCommandes from "./Notifications";
 
-const ETAPES = {
-  avis: { champ: "avis", label: "Avis", oui: 1, non: -1, Oui: ThumbsUp, Non: ThumbsDown, txtOui: "Aimé", txtNon: "Pas aimé", ariaOui: "Repas apprécié", ariaNon: "Repas pas apprécié" },
-  assiettes: { champ: "consommation", label: "Assiettes", oui: "termine", non: "non_termine", Oui: Check, Non: X, txtOui: "Terminé", txtNon: "Pas fini", ariaOui: "Assiette terminée", ariaNon: "Assiette pas terminée" },
-};
+const CALQUES_RETOURS = CALQUES.filter((c) => c.id !== "classes");
 
-function Choix({ actif, ton, onClick, Icone, texte, aria, grand }) {
-  const styles = actif
-    ? ton === "oui" ? "border-[#FF5A5F] bg-[#FF5A5F] text-white" : "border-[#222222] bg-[#222222] text-white"
-    : "border-[#EBEBEB] bg-white text-[#222222] hover:border-[#222222]";
+// Fiche rapide ouverte depuis une place : deux gestes, repas terminé ou non terminé.
+function FicheRetour({ e, vague, onChoisir, onClose }) {
+  if (!e) return null;
+  const choix = (valeur) => onChoisir(e, { consommation: e.consommation === valeur ? null : valeur }, true);
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={actif}
-      aria-label={aria}
-      className={`flex flex-1 flex-col items-center justify-center gap-0.5 rounded-[16px] border-2 transition-colors active:scale-[0.97] ${grand ? "h-[68px]" : "h-12 flex-row gap-1.5"} ${styles}`}
-    >
-      <Icone size={grand ? 26 : 18} strokeWidth={2.2} aria-hidden="true" />
-      <span className={grand ? "text-[11px] font-medium" : "text-[13px] font-medium"}>{texte}</span>
-    </button>
-  );
-}
-
-function Marqueurs({ e }) {
-  return (
-    <span className="flex flex-wrap items-center gap-x-2 text-[12px]">
-      {e.allergies.length > 0 && <span className="font-semibold text-[#B30000]">⚠ {e.allergies.join(", ")}</span>}
-      {e.menu_type === "sans_allergene" && <span className="text-[#FF5A5F]">Spécial</span>}
-      <span className="text-[#717171]">{tiersEnFraction(e.tiers)}</span>
-    </span>
+    <Panneau ouvert onClose={onClose} titre={e.nom} surTitre={e.place ? `Place ${e.place}` : "Sans place"}
+      pied={
+        <div className="grid grid-cols-2 gap-3">
+          <button type="button" onClick={() => choix("termine")} aria-pressed={e.consommation === "termine"}
+            className={`flex h-16 flex-col items-center justify-center rounded-[18px] border-2 text-[14px] font-semibold transition-colors active:scale-[0.98] ${
+              e.consommation === "termine" ? "border-[#222222] bg-[#222222] text-white" : "border-[#222222] bg-white text-[#222222]"}`}>
+            <Check size={22} strokeWidth={2.5} aria-hidden="true" /> Repas terminé
+          </button>
+          <button type="button" onClick={() => choix("non_termine")} aria-pressed={e.consommation === "non_termine"}
+            className={`flex h-16 flex-col items-center justify-center rounded-[18px] border-2 text-[14px] font-semibold transition-colors active:scale-[0.98] ${
+              e.consommation === "non_termine" ? "border-[#FF5A5F] bg-[#FF5A5F] text-white" : "border-[#FF5A5F] bg-white text-[#222222]"}`}>
+            <X size={22} strokeWidth={2.5} aria-hidden="true" /> Non terminé
+          </button>
+        </div>
+      }>
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Avatar nom={e.nom} photo={e.photo} taille={56} />
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-[#222222]">{e.classe}</p>
+            {vague && <p className="text-[14px] text-[#717171]">{vague}</p>}
+          </div>
+        </div>
+        {e.allergies.length > 0 && (
+          <p className="flex items-center gap-2 rounded-[14px] border-2 border-[#B30000] px-4 py-3 text-[14px] font-semibold text-[#B30000]">
+            <AlertTriangle size={17} aria-hidden="true" /> Allergie : <span className="capitalize">{e.allergies.join(", ")}</span>
+          </p>
+        )}
+        <dl className="grid grid-cols-[1fr_auto] gap-3">
+          <div className="rounded-[18px] bg-[#F7F7F7] p-4">
+            <dt className="text-[12px] text-[#717171]">{e.menu_type === "sans_allergene" ? "Plat spécial" : "Plat commandé"}</dt>
+            <dd className="mt-0.5 text-[15px] font-medium text-[#222222]">{e.plat_nom}</dd>
+          </div>
+          <div className="rounded-[18px] bg-[#F7F7F7] p-4 text-center">
+            <dt className="text-[12px] text-[#717171]">Portion</dt>
+            <dd className="mt-0.5 text-[22px] font-semibold text-[#222222]" style={titreStyle}>{tiersEnFraction(e.tiers)}</dd>
+          </div>
+          {e.regime && (
+            <div className="col-span-2 rounded-[18px] bg-[#FFF0ED] p-4">
+              <dt className="text-[12px] text-[#717171]">Particularité</dt>
+              <dd className="mt-0.5 text-[15px] font-medium text-[#222222]">{e.regime}</dd>
+            </div>
+          )}
+        </dl>
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] text-[#717171]">Avis</span>
+          {[[1, ThumbsUp, "Aimé"], [-1, ThumbsDown, "Pas aimé"]].map(([v, Icone, l]) => (
+            <button key={v} type="button" aria-pressed={e.avis === v} onClick={() => onChoisir(e, { avis: e.avis === v ? null : v }, false)}
+              className={`flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium ${
+                e.avis === v ? "border-[#222222] bg-[#222222] text-white" : "border-[#EBEBEB] text-[#222222]"}`}>
+              <Icone size={15} aria-hidden="true" /> {l}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Panneau>
   );
 }
 
 export default function Retours() {
   const { date, setDate, mode } = useReglages();
   const [params, setParams] = useSearchParams();
-  const [service, setService] = useState(null);
-  const [vague, setVague] = useState(null);
-  const [etape, setEtape] = useState(null);
+  const [donnees, setDonnees] = useState(null); // { cle, salle, vague }
   const [erreur, setErreur] = useState("");
   const [fiche, setFiche] = useState(null);
+  const [confirmer, setConfirmer] = useState(false);
+  const [calques, basculer] = useCalques("cuisine.calques.retours", ["allergies"]);
+  const demande = params.get("vague") || undefined;
 
-  const chargerService = useCallback(() => getService(date, mode).then(setService).catch((e) => setErreur(erreurApi(e))), [date, mode]);
-  useEffect(() => { chargerService(); }, [chargerService]);
+  const charger = useCallback((cle) => {
+    getSalleCuisine(date, cle, mode)
+      .then((salle) => salle.vague
+        ? getVague(salle.vague, date, mode).then((v) => setDonnees({ salle, vague: v }))
+        : setDonnees({ salle, vague: null }))
+      .then(() => setErreur(""))
+      .catch((e) => setErreur(erreurApi(e, "Plan indisponible.")));
+  }, [date, mode]);
+  useEffect(() => { charger(demande); }, [charger, demande]);
 
-  const cle = params.get("vague")
-    || service?.vagues.find((v) => v.evalues < v.eleves)?.cle
-    || service?.vagues[0]?.cle;
+  const salle = donnees?.salle;
+  const eleves = useMemo(() => donnees?.vague?.eleves ?? [], [donnees]);
+  const sansPlace = eleves.filter((e) => !e.place);
+  const faits = eleves.filter((e) => e.consommation).length;
+  const vagueCourante = salle?.vagues.find((v) => v.cle === salle.vague);
+  const idx = salle?.vagues.findIndex((v) => v.cle === salle.vague) ?? -1;
+  const suivante = idx >= 0 ? salle.vagues[idx + 1] : null;
+  const libelleVague = vagueCourante ? (mode === "classe" || donnees?.vague?.sous_titre === "Classe" ? vagueCourante.nom : `Vague de ${vagueCourante.nom}`) : "";
 
-  useEffect(() => {
-    if (!cle) return;
-    let actif = true;
-    getVague(cle, date, mode)
-      .then((v) => { if (!actif) return; setVague(v); setEtape((e) => e ?? (v.primaire ? "avis" : "assiettes")); })
-      .catch((e) => actif && setErreur(erreurApi(e)));
-    return () => { actif = false; };
-  }, [cle, date, mode]);
-
-  const E = ETAPES[etape || "assiettes"];
+  // Mise à jour immédiate sur le plan, annulée si le serveur refuse.
+  const appliquer = (maj) => setDonnees((d) => d && ({
+    ...d,
+    vague: { ...d.vague, eleves: d.vague.eleves.map((e) => (maj[e.id] ? { ...e, ...maj[e.id] } : e)) },
+    salle: { ...d.salle, tables: d.salle.tables.map((t) => ({
+      ...t, places: t.places.map((p) => (p.eleve && maj[p.eleve.id] ? { ...p, eleve: { ...p.eleve, ...maj[p.eleve.id] } } : p)),
+    })) },
+  }));
 
   const enregistrer = async (lignes) => {
-    const avant = vague;
-    setVague((v) => ({
-      ...v,
-      eleves: v.eleves.map((e) => {
-        const l = lignes.find((x) => x.eleve_id === e.id);
-        return l ? { ...e, ...("avis" in l ? { avis: l.avis } : {}), ...("consommation" in l ? { consommation: l.consommation } : {}) } : e;
-      }),
-    }));
+    const avant = donnees;
+    appliquer(Object.fromEntries(lignes.map(({ eleve_id, ...champs }) => [eleve_id, champs])));
     try {
       await envoyerRetours(date, lignes, mode);
       setErreur("");
     } catch (e) {
-      setVague(avant);
+      setDonnees(avant);
       setErreur(erreurApi(e, "Enregistrement impossible."));
     }
   };
 
-  const choisir = (e, valeur) => enregistrer([{ eleve_id: e.id, [E.champ]: e[E.champ] === valeur ? null : valeur }]);
-  const toutTermine = () => {
-    const restants = vague.eleves.filter((e) => !e.consommation);
-    if (restants.length) enregistrer(restants.map((e) => ({ eleve_id: e.id, consommation: "termine" })));
+  const choisir = (e, champs, fermer) => {
+    enregistrer([{ eleve_id: e.id, ...champs }]);
+    if (fermer) setFiche(null); else setFiche((f) => f && { ...f, ...champs });
   };
-
-  const faits = vague?.eleves.filter((e) => e[E.champ] != null).length ?? 0;
-  const total = vague?.eleves.length ?? 0;
-  const fini = total > 0 && faits === total;
-  const suivante = service?.vagues.find((v) => v.cle === vague?.suivante);
-  const allerA = (c) => { setParams({ vague: c }, { replace: true }); chargerService(); window.scrollTo({ top: 0 }); };
+  const toutTermine = () => {
+    const restants = eleves.filter((e) => !e.consommation);
+    if (restants.length) enregistrer(restants.map((e) => ({ eleve_id: e.id, consommation: "termine" })));
+    setConfirmer(false);
+  };
+  const allerA = (cle) => { setParams({ vague: cle }, { replace: true }); window.scrollTo({ top: 0 }); };
+  const ouvrir = (e) => setFiche(eleves.find((x) => x.id === e.id) ?? e);
 
   return (
-    <EspaceLayout
-      titre="Retour assiettes"
-      surTitre={dateLongue(date)}
-      onglets={ONGLETS_CUISINE}
-      large
-      action={<Reglages date={date} setDate={setDate} modes={[]} />}
-    >
+    <EspaceLayout titre="Retour assiettes" surTitre={dateLongue(date)} onglets={ONGLETS_CUISINE} large
+      outils={<NotificationsCommandes />}
+      action={<Reglages date={date} setDate={setDate} modes={[]} />}>
       <Alerte>{erreur}</Alerte>
-      {service && (
-        <ChoixVague
-          vagues={service.vagues}
-          valeur={cle}
-          onChange={allerA}
-          compteur={(v) => (v.eleves && v.evalues >= v.eleves ? "✓" : `${v.evalues}/${v.eleves}`)}
-        />
-      )}
-
-      {vague && (
+      {!salle && !erreur && <div className="h-64 animate-pulse rounded-[28px] bg-[#F7F7F7]" aria-busy="true" />}
+      {salle && (
         <>
-          <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2 className="text-[26px] font-semibold text-[#222222]" style={titreStyle}>{vague.sous_titre === "Classe" ? vague.nom : `Vague de ${vague.nom}`}</h2>
-              <p className="text-[14px] text-[#717171]">
-                {etape === "avis" ? "Le repas a-t-il plu ? Un geste par élève." : "L'assiette est-elle terminée ? Rien n'est déduit de la commande."}
-              </p>
-            </div>
-            <div role="radiogroup" aria-label="Étape" className="grid grid-cols-2 gap-1 rounded-full bg-[#F7F7F7] p-1">
-              {Object.entries(ETAPES).map(([id, x]) => (
-                <button key={id} type="button" role="radio" aria-checked={etape === id} onClick={() => setEtape(id)}
-                  className={`flex h-10 items-center justify-center gap-1.5 rounded-full px-4 text-[14px] font-medium ${etape === id ? "bg-white text-[#222222] shadow-[0_1px_4px_rgba(0,0,0,0.08)]" : "text-[#717171]"}`}>
-                  <x.Oui size={15} /> {x.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ChoixVague vagues={salle.vagues} valeur={salle.vague} onChange={allerA} />
+          {!salle.vague && <p className="mt-6 rounded-[22px] bg-[#F7F7F7] p-6 text-[14px] text-[#717171]">Aucune vague pour cette date.</p>}
 
-          <div className="mt-4"><BarreProgression valeur={faits} total={total} libelle="Élèves saisis" /></div>
+          {salle.vague && (
+            <>
+              <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-[26px] font-semibold text-[#222222]" style={titreStyle}>{libelleVague}</h2>
+                  <p className="text-[14px] text-[#717171]">Touchez une place, puis indiquez si le repas est terminé.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {faits < eleves.length && eleves.length > 0 && (
+                    <button type="button" onClick={() => (confirmer ? toutTermine() : setConfirmer(true))} onBlur={() => setConfirmer(false)}
+                      className={`flex h-11 items-center gap-2 rounded-full border px-4 text-[14px] font-medium ${confirmer ? "border-[#222222] bg-[#222222] text-white" : "border-[#222222] text-[#222222]"}`}>
+                      <CheckCheck size={16} aria-hidden="true" />
+                      {confirmer ? `Confirmer : ${eleves.length - faits} terminés` : "Restants terminés"}
+                    </button>
+                  )}
+                  {suivante && (
+                    <button type="button" onClick={() => allerA(suivante.cle)}
+                      className={`flex h-11 items-center gap-2 rounded-full px-5 text-[14px] font-medium text-white ${faits === eleves.length ? "bg-[#FF5A5F]" : "bg-[#222222]"}`}>
+                      {suivante.nom} <ArrowRight size={16} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4" aria-live="polite">
+                <BarreProgression valeur={faits} total={eleves.length} libelle="Retours saisis" />
+              </div>
 
-          {total === 0 && <p className="mt-8 text-[14px] text-[#717171]">Aucun élève dans cette vague.</p>}
+              <div className="mt-5"><ChoixCalques calques={calques} onToggle={basculer} liste={CALQUES_RETOURS} /></div>
 
-          {vague.primaire ? (
-            <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {vague.eleves.map((e) => (
-                <li key={e.id} className={`rounded-[22px] border p-3 transition-colors ${e[E.champ] != null ? "border-[#EBEBEB] bg-[#F7F7F7]" : "border-[#EBEBEB] bg-white"}`}>
-                  <button type="button" onClick={() => setFiche(e)} className="flex w-full flex-col items-center gap-1.5 pb-3 pt-1 text-center">
-                    <Avatar nom={e.nom} photo={e.photo} taille={52} />
-                    <span className="w-full truncate text-[15px] font-semibold text-[#222222]">{e.nom.split(" ")[0]}</span>
-                    <span className="-mt-1 w-full truncate text-[12px] text-[#717171]">{e.nom.split(" ").slice(1).join(" ")}</span>
-                    <Marqueurs e={e} />
-                  </button>
-                  <div className="flex gap-2">
-                    <Choix grand actif={e[E.champ] === E.oui} ton="oui" onClick={() => choisir(e, E.oui)} Icone={E.Oui} texte={E.txtOui} aria={`${e.nom} : ${E.ariaOui}`} />
-                    <Choix grand actif={e[E.champ] === E.non} ton="non" onClick={() => choisir(e, E.non)} Icone={E.Non} texte={E.txtNon} aria={`${e.nom} : ${E.ariaNon}`} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ul className="mt-6 divide-y divide-[#EBEBEB] rounded-[22px] border border-[#EBEBEB]">
-              {vague.eleves.map((e) => (
-                <li key={e.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                  <button type="button" onClick={() => setFiche(e)} className="flex min-w-[180px] flex-1 items-center gap-3 text-left">
-                    <Avatar nom={e.nom} photo={e.photo} taille={40} />
-                    <span className="min-w-0">
-                      <span className="block truncate text-[15px] font-medium text-[#222222]">{e.nom}</span>
-                      <Marqueurs e={e} />
-                    </span>
-                  </button>
-                  <div className="flex w-full gap-2 sm:w-[300px]">
-                    <Choix actif={e[E.champ] === E.oui} ton="oui" onClick={() => choisir(e, E.oui)} Icone={E.Oui} texte={E.txtOui} aria={`${e.nom} : ${E.ariaOui}`} />
-                    <Choix actif={e[E.champ] === E.non} ton="non" onClick={() => choisir(e, E.non)} Icone={E.Non} texte={E.txtNon} aria={`${e.nom} : ${E.ariaNon}`} />
-                  </div>
-                </li>
-              ))}
-            </ul>
+              <div className="mt-5 rounded-[28px] border border-[#EBEBEB] bg-white px-2 py-4 sm:p-6">
+                {salle.tables.length ? (
+                  <Plan salle={salle} calques={calques} onSelect={ouvrir} retour />
+                ) : (
+                  <p className="p-6 text-[14px] text-[#717171]">Aucune table pour cette vague.</p>
+                )}
+                <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 px-4 text-[13px] text-[#717171]">
+                  <span className="flex items-center gap-2"><span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#222222] text-[10px] font-bold text-white">✓</span>Terminé</span>
+                  <span className="flex items-center gap-2"><span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#FF5A5F] text-[10px] font-bold text-white">✕</span>Non terminé</span>
+                  <span>Sans badge : à saisir</span>
+                </div>
+              </div>
+
+              {sansPlace.length > 0 && (
+                <section className="mt-6">
+                  <p className="text-[12px] uppercase tracking-[0.28px] text-[#B0B0B0]">Élèves sans place attribuée</p>
+                  <ul className="mt-2 divide-y divide-[#EBEBEB]">
+                    {sansPlace.map((e) => (
+                      <li key={e.id}>
+                        <button type="button" onClick={() => setFiche(e)} className="flex w-full items-center gap-3 py-3 text-left">
+                          <span className="min-w-0 flex-1 truncate text-[15px] text-[#222222]">{e.nom}</span>
+                          {e.consommation && (
+                            <span className={`text-[13px] font-medium ${e.consommation === "termine" ? "text-[#222222]" : "text-[#FF5A5F]"}`}>
+                              {e.consommation === "termine" ? "✓ Terminé" : "✕ Non terminé"}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </>
           )}
-
-          <div className="h-28" />
-          <div className="fixed inset-x-0 bottom-0 z-10 border-t border-[#EBEBEB] bg-white/95 px-5 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-            <div className="mx-auto flex max-w-[1100px] items-center gap-3">
-              <p className="min-w-0 flex-1 text-[14px] text-[#222222]" aria-live="polite">
-                {fini ? <span className="font-medium">{vague.sous_titre === "Classe" ? "Classe" : "Vague"} terminée</span> : <><span className="font-semibold tabular-nums">{total - faits}</span> à saisir</>}
-              </p>
-              {etape === "assiettes" && !fini && total > 0 && (
-                <button type="button" onClick={toutTermine}
-                  className="flex h-12 shrink-0 items-center gap-2 rounded-full border border-[#222222] px-4 text-[14px] font-medium text-[#222222]">
-                  <CheckCheck size={17} /> Tout fini
-                </button>
-              )}
-              {suivante && (
-                <button type="button" onClick={() => allerA(suivante.cle)}
-                  className={`flex h-12 shrink-0 items-center gap-2 rounded-full px-5 text-[14px] font-medium ${fini ? "bg-[#FF5A5F] text-white" : "bg-[#222222] text-white"}`}>
-                  {suivante.nom} <ArrowRight size={17} />
-                </button>
-              )}
-            </div>
-          </div>
         </>
       )}
-      <FicheEleve eleve={fiche} vague={vague?.nom} onClose={() => setFiche(null)} />
+      <FicheRetour e={fiche} vague={libelleVague} onChoisir={choisir} onClose={() => setFiche(null)} />
     </EspaceLayout>
   );
 }

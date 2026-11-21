@@ -25,6 +25,7 @@ from ..models import (
     Eleve,
     MenuJour,
     Niveau,
+    Parametres,
     Place,
     Plat,
     Presence,
@@ -35,6 +36,7 @@ from ..models import (
     User,
 )
 from .eleve import _allergenes_par_plat, _ingredients_par_plat
+from .reservations import heure_limite
 
 # Règles d'adaptation des portions (jamais sur un seul repas).
 FENETRE = 20  # derniers repas observés
@@ -112,13 +114,13 @@ def couverts_du_jour(db: Session, jour: _date, mode: str, classes: list[Classe])
         rows = db.execute(
             select(Reservation, Eleve, Creneau)
             .join(Eleve, Eleve.id == Reservation.eleve_id)
-            .join(Creneau, Creneau.id == Reservation.creneau_id)
+            .outerjoin(Creneau, Creneau.id == Reservation.creneau_id)
             .where(
                 Reservation.menu_jour_id.in_(list(menus) or [-1]),
                 Reservation.statut != "annulee",
                 Eleve.classe.in_(noms_classes or [""]),
             )
-            .order_by(Creneau.heure_debut, Eleve.nom)
+            .order_by(Creneau.heure_debut.nulls_last(), Eleve.nom)
         ).all()
         creneaux = db.scalars(select(Creneau).where(Creneau.date == jour).order_by(Creneau.heure_debut)).all()
         for c in creneaux:
@@ -131,8 +133,11 @@ def couverts_du_jour(db: Session, jour: _date, mode: str, classes: list[Classe])
                     "heure_fin": c.heure_fin,
                 }
             )
+        # Commandes passées la veille dont la vague n'est pas encore choisie : comptées dans les quantités.
+        if any(c is None for _, _, c in rows):
+            vagues.append({"cle": "attente", "nom": "À choisir", "sous_titre": "Vague non choisie", "heure_debut": None, "heure_fin": None})
         for r, e, c in rows:
-            couverts.append(Couvert(e, menus[r.menu_jour_id][0], r.tiers, f"c{c.id}", r.place_id, r.statut == "servie"))
+            couverts.append(Couvert(e, menus[r.menu_jour_id][0], r.tiers, f"c{c.id}" if c else "attente", r.place_id, r.statut == "servie"))
         return couverts, menus, vagues
 
     # Mode classe
@@ -167,7 +172,8 @@ def couverts_du_jour(db: Session, jour: _date, mode: str, classes: list[Classe])
         for e in eleves:
             allergique = bool(alg_principal & {a.lower() for a in e.allergies or []})
             menu = sans if allergique and sans else principal
-            couverts.append(Couvert(e, menu, e.portion_defaut or 3, f"k{cl.id}", places.get(e.id), e.id in servis))
+            # Mode Classe : l'appel validé fait entrer les présents dans le service.
+            couverts.append(Couvert(e, menu, e.portion_defaut or 3, f"k{cl.id}", places.get(e.id), appel is not None or e.id in servis))
     return couverts, menus, vagues
 
 
@@ -213,9 +219,11 @@ def agreger(db: Session, couverts: list[Couvert], menus: dict, mode: str) -> tup
         regimes = Counter((c.eleve.regime or "").strip() for c in cs if (c.eleve.regime or "").strip())
         base["particularites"] = [{"libelle": k, "nb": v} for k, v in regimes.most_common()]
         if m.type == "sans_allergene":
-            parent = plats_par_id.get(p.sans_allergene_de) if p.sans_allergene_de else None
+            parent = (plats_par_id.get(p.sans_allergene_de) or db.get(Plat, p.sans_allergene_de)) if p.sans_allergene_de else None
             alg_parent = {a for _, a in algs.get(parent.id, [])} if parent else set()
             base["remplace"] = parent.nom if parent else None
+            # Même photographie que le plat classique : la différence reste visuelle et informative.
+            base["photo"] = (parent.photo if parent else None) or p.photo
             base["evite"] = sorted(alg_parent - set(allergenes))
             base["eleves"] = [
                 {
@@ -249,8 +257,11 @@ def service(db: Session, user: User, jour: _date, mode_demande: str | None) -> d
     par_vague: dict[str, list[Couvert]] = defaultdict(list)
     for c in couverts:
         par_vague[c.vague].append(c)
+    delai = db.get(Parametres, 1).delai_preparation_min
     for v in vagues:
         cs = par_vague.get(v["cle"], [])
+        # Mode Commande : heure limite de commande de la vague (début moins délai de préparation).
+        v["heure_limite"] = heure_limite(v["heure_debut"], delai) if mode == "commande" and v["heure_debut"] else None
         v["eleves"] = len(cs)
         v["servis"] = sum(c.servi for c in cs)
         v["evalues"] = sum(1 for c in cs if (r := repas.get(c.eleve.id)) and r.consommation)
@@ -265,6 +276,7 @@ def service(db: Session, user: User, jour: _date, mode_demande: str | None) -> d
         "classiques": classiques,
         "speciaux": speciaux,
         "vagues": vagues,
+        "delai_preparation_min": delai,
     }
 
 
@@ -390,10 +402,8 @@ def enregistrer_retours(db: Session, user: User, jour: _date, retours: list, mod
         if "avis" in champs:
             r.avis = rt.avis
         if "consommation" in champs:
+            # Consommation réelle uniquement : le statut de commande et de service n'est jamais modifié ici.
             r.consommation = rt.consommation
-            # L'assiette a été récupérée : elle avait donc été servie.
-            if rt.consommation and r.menu_servi_id is None:
-                r.menu_servi_id = c.menu.id
             touches.add(c.eleve.id)
         r.saisi_par, r.saisi_a = user.id, now
         out.append({"eleve_id": c.eleve.id, "avis": r.avis, "consommation": r.consommation})

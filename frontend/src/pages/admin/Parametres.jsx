@@ -36,6 +36,10 @@ function FormCommandes({ p, onClose, onSave }) {
           <input type="time" className={champ} value={f.cloture_commandes.slice(0, 5)} onChange={(e) => setF({ ...f, cloture_commandes: e.target.value })} />
           <span className="mt-1 block text-[12px] font-normal text-[#B0B0B0]">Les quantités de la cuisine sont figées à cette heure.</span>
         </label>
+        <label className="text-[13px] font-medium">Récréation : choix de la vague
+          <input type="time" className={champ} value={(f.heure_recreation ?? "10:00").slice(0, 5)} onChange={(e) => setF({ ...f, heure_recreation: e.target.value })} />
+          <span className="mt-1 block text-[12px] font-normal text-[#B0B0B0]">Le jour même, les élèves choisissent leur vague à partir de cette heure.</span>
+        </label>
         <label className="text-[13px] font-medium">Découvert autorisé (F)
           <input type="number" min={0} className={champ} value={f.decouvert_max} onChange={(e) => setF({ ...f, decouvert_max: Number(e.target.value) })} />
         </label>
@@ -89,9 +93,10 @@ export default function Parametres() {
       {p && (
         <Bloc titre="Commandes" description="Fenêtre pendant laquelle les élèves réservent, et découvert toléré sur leur crédit.">
           <Carte className="flex flex-wrap items-center justify-between gap-4">
-            <dl className="grid flex-1 grid-cols-3 gap-4">
+            <dl className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
               <div><dt className="text-[12px] text-[#717171]">Ouverture</dt><dd className="text-[18px] font-semibold" style={titreStyle}>{formatHeure(p.ouverture_commandes)}</dd></div>
               <div><dt className="text-[12px] text-[#717171]">Clôture</dt><dd className="text-[18px] font-semibold" style={titreStyle}>{formatHeure(p.cloture_commandes)}</dd></div>
+              <div><dt className="text-[12px] text-[#717171]">Choix de vague</dt><dd className="text-[18px] font-semibold" style={titreStyle}>{formatHeure(p.heure_recreation ?? "10:00")}</dd></div>
               <div><dt className="text-[12px] text-[#717171]">Découvert</dt><dd className="text-[18px] font-semibold" style={titreStyle}>{fcfa(p.decouvert_max)}</dd></div>
             </dl>
             <BoutonAction variante="doux" icone={Pencil} onClick={() => setEdition("commandes")}>Modifier</BoutonAction>

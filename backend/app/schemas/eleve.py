@@ -30,6 +30,8 @@ class MenuDuJourResponse(BaseModel):
     date: date
     commandes_ouvertes: bool
     cloture_commandes: time
+    vague_ouverte: bool = False  # jour même, après la récréation
+    heure_recreation: time | None = None
     compatibles: list[OptionMenu]
     incompatibles: list[OptionMenu]
 
@@ -84,20 +86,33 @@ class SalleResponse(BaseModel):
 
 class ReservationCreate(BaseModel):
     menu_jour_id: int
+    tiers: int
+    # Facultatifs : la vague se choisit le jour même, à partir de la récréation.
+    creneau_id: int | None = None
+    place_id: int | None = None
+
+
+class VagueChoix(BaseModel):
     creneau_id: int
     place_id: int
-    tiers: int
 
 
 class ReservationCreated(BaseModel):
     id: int
     menu_jour_id: int
-    creneau_id: int
-    place_id: int
+    creneau_id: int | None
+    place_id: int | None
     tiers: int
     prix: int
     statut: str
-    ticket: str
+    ticket: str | None
+
+
+class MenuAVenir(BaseModel):
+    date: date
+    commandable: bool
+    compatibles: list["OptionMenu"]
+    incompatibles: list["OptionMenu"]
 
 
 class PublicKeyResponse(BaseModel):
@@ -113,11 +128,15 @@ class ReservationDuJourResponse(BaseModel):
     tiers: int
     prix: int
     statut: str
-    creneau: CreneauLite
-    place: PlaceLite
-    ticket: str
+    date: date
+    creneau: CreneauLite | None
+    place: PlaceLite | None
+    ticket: str | None
     annulable: bool
     cloture_commandes: time
+    vague_a_choisir: bool = False
+    choix_vague_ouvert: bool = False
+    heure_recreation: time | None = None
 
 
 class HistoriqueReservation(BaseModel):

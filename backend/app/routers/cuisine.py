@@ -5,7 +5,7 @@ from datetime import date as _date
 from datetime import timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -13,9 +13,11 @@ from sqlalchemy.orm import Session
 from ..deps import get_db, require_roles
 from ..models import (
     Allergene,
+    Eleve,
     Ingredient,
     IngredientAllergene,
     MenuJour,
+    Parametres,
     Plat,
     PlatIngredient,
     Reservation,
@@ -24,6 +26,7 @@ from ..models import (
 from ..services import service_cuisine as sc
 from ..services.cuisine import fiche_cuisine, impact_allergenes
 from ..services.eleve import _allergenes_par_plat, _ingredients_par_plat
+from ..services.statistiques import _bornes_mois, aujourdhui, stats_cuisine
 
 router = APIRouter(prefix="/cuisine", tags=["cuisine"])
 cuisine = require_roles("cuisine", "admin")
@@ -265,3 +268,44 @@ def put_retours(body: RetoursIn, user: User = Depends(cuisine), db: Session = De
 @router.get("/eleves/{eleve_id}/stats")
 def get_stats(eleve_id: int, _: User = Depends(cuisine), db: Session = Depends(get_db)):
     return sc.stats_eleve(db, eleve_id)
+
+
+# ---------- Réglages du chef et statistiques ----------
+
+
+class ReglagesCuisineIn(BaseModel):
+    delai_preparation_min: int = Field(ge=0, le=240)
+
+
+@router.get("/reglages")
+def get_reglages(_: User = Depends(cuisine), db: Session = Depends(get_db)):
+    return {"delai_preparation_min": db.get(Parametres, 1).delai_preparation_min}
+
+
+@router.put("/reglages")
+def put_reglages(body: ReglagesCuisineIn, _: User = Depends(cuisine), db: Session = Depends(get_db)):
+    p = db.execute(select(Parametres).where(Parametres.id == 1).with_for_update()).scalar_one()
+    p.delai_preparation_min = body.delai_preparation_min
+    db.commit()
+    return {"delai_preparation_min": p.delai_preparation_min}
+
+
+@router.get("/statistiques")
+def get_statistiques(
+    periode: str = Query("semaine", pattern="^(jour|semaine|mois)$"),
+    date: _date | None = None,
+    mode: str | None = None,
+    user: User = Depends(cuisine),
+    db: Session = Depends(get_db),
+):
+    jour = date or aujourdhui()
+    if periode == "jour":
+        debut = fin = jour
+    elif periode == "semaine":
+        debut = jour - timedelta(days=jour.weekday())
+        fin = debut + timedelta(days=6)
+    else:
+        debut, fin = _bornes_mois(jour.year, jour.month)
+    m, _, classes = sc.perimetre(db, user, mode)
+    ids = set(db.scalars(select(Eleve.id).where(Eleve.classe.in_([c.nom for c in classes] or [""]))))
+    return {"periode": periode, "mode": m, **stats_cuisine(db, ids, debut, fin)}

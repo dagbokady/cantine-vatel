@@ -1,9 +1,12 @@
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { UtensilsCrossed, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { titreStyle } from "../../utils/tokens";
+import { APP_LOGO, APP_NAME } from "../../config/app";
+import { MATRICULE_ERREUR, matriculeValide, normaliserMatricule } from "../../utils/matricule";
+import { activerBorne } from "../../utils/jour";
 
 const NB_CHIFFRES = 4;
 
@@ -75,8 +78,10 @@ function PinInput({ value, onChange }) {
   );
 }
 
-export default function Login() {
-  const { login, choisirPin } = useAuth();
+export default function Login({ borne = false }) {
+  const { login, choisirPin, logout } = useAuth();
+  // Borne partagée : arriver sur la borne ferme toujours la session de l'élève précédent.
+  useEffect(() => { if (borne) logout(); }, [borne, logout]);
   const navigate = useNavigate();
 
   const [matricule, setMatricule] = useState("");
@@ -85,24 +90,30 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [touche, setTouche] = useState(false);
+  const matOk = matriculeValide(matricule);
+
   async function handleSubmit(e) {
     e.preventDefault();
+    setTouche(true);
+    if (!matOk) return;
     setError("");
     setLoading(true);
 
     try {
       if (premiere) {
-        await choisirPin(matricule.trim(), pin);
+        await choisirPin(matricule, pin);
       } else {
-        await login(matricule.trim(), pin);
+        await login(matricule, pin);
       }
+      activerBorne(borne);
 
       navigate("/", { replace: true });
     } catch (err) {
       const st = err.response?.status;
 
       setError(
-          st === 409
+          st === 409 || st === 422
               ? err.response.data.detail
               : st === 401 || st === 404
                   ? premiere
@@ -128,11 +139,9 @@ export default function Login() {
         <section className="relative hidden min-h-screen overflow-hidden bg-[#FFF0ED] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
 
           <div className="relative z-10 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FF5A5F] text-white">
-              <UtensilsCrossed size={23} />
-            </div>
+            <img src={APP_LOGO} alt="" className="h-11 w-11" />
             <span className="text-xl font-semibold tracking-tight text-[#222222]">
-            Cantine Vatel
+            {APP_NAME}
           </span>
           </div>
 
@@ -173,7 +182,7 @@ export default function Login() {
           </div>
 
           <p className="relative z-10 text-xs text-[#717171]">
-            © 2026 Cantine Vatel · Tous droits réservés
+            © 2026 {APP_NAME} · Tous droits réservés
           </p>
 
           <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full border-[50px] border-white/40" />
@@ -185,20 +194,18 @@ export default function Login() {
           <div className="w-full max-w-[420px]">
 
             <div className="mb-12 lg:hidden">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FF5A5F] text-white">
-                <UtensilsCrossed size={28} />
-              </div>
+              <img src={APP_LOGO} alt="" className="mx-auto h-16 w-16" />
               <h1
                   className="mt-4 text-center text-3xl font-semibold text-[#222222]"
                   style={titreStyle}
               >
-                Cantine Vatel
+                {APP_NAME}
               </h1>
             </div>
 
             <div className="mb-9">
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF5A5F]">
-              Espace élève
+              {borne ? "Borne de commande" : "Espace élève"}
             </span>
 
               <h1
@@ -211,7 +218,9 @@ export default function Login() {
               <p className="mt-3 text-[15px] leading-6 text-[#717171]">
                 {premiere
                     ? "Définis ton code PIN personnel pour sécuriser ton compte."
-                    : "Connecte-toi pour retrouver tes repas et ton espace personnel."}
+                    : borne
+                        ? "Sans téléphone : saisis ton matricule et ton code PIN pour commander."
+                        : "Connecte-toi pour retrouver tes repas et ton espace personnel."}
               </p>
             </div>
 
@@ -230,15 +239,23 @@ export default function Login() {
                     type="text"
                     value={matricule}
                     onChange={(e) => {
-                      setMatricule(e.target.value.toUpperCase());
+                      setMatricule(normaliserMatricule(e.target.value));
                       setError("");
                     }}
-                    placeholder="Ex : LYC-2026-001"
+                    onBlur={() => matricule && setTouche(true)}
+                    maxLength={9}
+                    spellCheck={false}
+                    aria-invalid={touche && !matOk}
+                    aria-describedby="aide-matricule"
+                    placeholder="Ex : 15079766N"
                     autoComplete="username"
                     autoCapitalize="characters"
                     required
-                    className="h-14 w-full rounded-2xl border border-[#EBEBEB] bg-[#F7F7F7] px-4 text-base text-[#222222] outline-none transition-all placeholder:text-[#B0B0B0] focus:border-[#FF5A5F] focus:bg-white focus:ring-4 focus:ring-[#FF5A5F]/10"
+                    className={`h-14 w-full rounded-2xl border bg-[#F7F7F7] px-4 text-base tracking-[0.08em] text-[#222222] outline-none transition-all placeholder:tracking-normal placeholder:text-[#B0B0B0] focus:bg-white focus:ring-4 ${touche && !matOk ? "border-[#B30000] focus:border-[#B30000] focus:ring-[#B30000]/10" : "border-[#EBEBEB] focus:border-[#FF5A5F] focus:ring-[#FF5A5F]/10"}`}
                 />
+                <p id="aide-matricule" className={`mt-2 text-[13px] ${touche && !matOk ? "text-[#B30000]" : "text-[#B0B0B0]"}`}>
+                  {touche && !matOk ? `Matricule invalide : ${MATRICULE_ERREUR}` : MATRICULE_ERREUR}
+                </p>
               </div>
 
               <div>
@@ -266,7 +283,7 @@ export default function Login() {
 
               <button
                   type="submit"
-                  disabled={loading || !matricule.trim() || pin.length !== NB_CHIFFRES}
+                  disabled={loading || !matOk || pin.length !== NB_CHIFFRES}
                   className="group flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#222222] text-base font-semibold text-white transition-all hover:bg-[#FF5A5F] disabled:cursor-not-allowed disabled:bg-[#EBEBEB] disabled:text-[#B0B0B0]"
               >
                 {loading

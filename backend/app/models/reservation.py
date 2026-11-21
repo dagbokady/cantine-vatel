@@ -12,8 +12,9 @@ class Reservation(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     eleve_id: Mapped[int] = mapped_column(ForeignKey("eleves.id", ondelete="CASCADE"), index=True)
     menu_jour_id: Mapped[int] = mapped_column(ForeignKey("menu_jour.id", ondelete="RESTRICT"))
-    creneau_id: Mapped[int] = mapped_column(ForeignKey("creneaux.id", ondelete="RESTRICT"))
-    place_id: Mapped[int] = mapped_column(ForeignKey("places.id", ondelete="RESTRICT"))
+    # Vague et place choisies le jour même, à partir de la récréation : vides jusque-là.
+    creneau_id: Mapped[int | None] = mapped_column(ForeignKey("creneaux.id", ondelete="RESTRICT"), nullable=True)
+    place_id: Mapped[int | None] = mapped_column(ForeignKey("places.id", ondelete="RESTRICT"), nullable=True)
     tiers: Mapped[int] = mapped_column(Integer)  # 1, 2 ou 3 (1/3, 2/3, 3/3)
     prix: Mapped[int] = mapped_column(Integer)  # FCFA, arrondi à 25
     statut: Mapped[str] = mapped_column(String(20))  # commandee, servie, annulee

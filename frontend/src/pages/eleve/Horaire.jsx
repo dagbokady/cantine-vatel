@@ -35,7 +35,7 @@ export default function Horaire() {
 
   return (
     <div className="min-h-screen bg-white pb-32">
-      <BackHeader titre="À quelle heure ?" etape={3} />
+      <BackHeader titre={etat.reservationId ? "Choisis ta vague" : "À quelle heure ?"} etape={3} />
 
       <main className="mx-auto max-w-[560px] px-5 pt-5">
         {error && (

@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { User, UtensilsCrossed, AlertCircle } from "lucide-react";
+import { CalendarDays, User, UtensilsCrossed, AlertCircle } from "lucide-react";
+import { estAujourdhui, libelleJour } from "../../utils/jour";
+import { formatHeure } from "../../utils/format";
 import { useI18n } from "../../utils/i18n";
 import { fcfa } from "../../utils/format";
 
@@ -43,8 +45,12 @@ export default function EcranRepasDuJour({ me, menu }) {
           className="text-[28px] font-bold text-[var(--color-ink)]"
           style={{ fontFamily: "'Space Grotesk', sans-serif", lineHeight: 1.14, letterSpacing: "-0.02em" }}
         >
-          Repas du jour
+          {estAujourdhui(menu.date) ? "Repas du jour" : `Repas de ${libelleJour(menu.date)}`}
         </h1>
+        <button type="button" onClick={() => navigate("/menus")}
+          className="mt-3 inline-flex h-10 items-center gap-2 rounded-full border border-[#EBEBEB] px-4 text-[14px] font-medium text-[#222222] hover:border-[#222222]">
+          <CalendarDays size={16} aria-hidden="true" /> Menus à venir
+        </button>
       </section>
 
       {/* Meal photo */}
@@ -198,6 +204,11 @@ export default function EcranRepasDuJour({ me, menu }) {
         >
           {t("reserver")}
         </button>
+        {peutReserver && !menu.vague_ouverte && (
+          <p className="mt-3 text-center text-[13px] text-[#717171]">
+            Tu choisiras ta vague le jour même, à partir de {formatHeure(menu.heure_recreation ?? "10:00")}.
+          </p>
+        )}
       </div>
     </div>
   );

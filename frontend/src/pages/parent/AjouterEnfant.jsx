@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { rattacherEnfant, verifierMatricule } from "../../api/pro";
 import EspaceLayout, { Alerte, Bouton, Champ } from "../../components/EspaceLayout";
+import { MATRICULE_ERREUR, matriculeValide, normaliserMatricule } from "../../utils/matricule";
 import { titreStyle } from "../../utils/tokens";
 import { ONGLETS_PARENT } from "./onglets";
 
@@ -35,9 +36,11 @@ export default function AjouterEnfant() {
       <div className="max-w-[440px]">
         <p className="mb-6 text-[15px] leading-relaxed text-[#717171]">Saisis le matricule indiqué sur la carte scolaire. Nous te montrerons l'élève pour confirmation.</p>
         <form onSubmit={chercher} className="space-y-4">
-          <Champ label="Matricule" value={matricule} placeholder="LYC-2026-002"
-            onChange={(e) => { setMatricule(e.target.value.toUpperCase()); setTrouve(null); }} />
-          {!trouve && <Bouton type="submit" className="h-[52px] w-full" disabled={matricule.trim().length < 3}>Rechercher</Bouton>}
+          <Champ label="Matricule" value={matricule} placeholder="15079766N"
+            maxLength={9} aria-describedby="aide-mat"
+            onChange={(e) => { setMatricule(normaliserMatricule(e.target.value)); setTrouve(null); }} />
+          <p id="aide-mat" className="-mt-2 text-[12px] text-[#B0B0B0]">{MATRICULE_ERREUR}</p>
+          {!trouve && <Bouton type="submit" className="h-[52px] w-full" disabled={!matriculeValide(matricule)}>Rechercher</Bouton>}
         </form>
         {trouve && (
           <div className="mt-6 rounded-[22px] bg-[#FFF0ED] p-6">

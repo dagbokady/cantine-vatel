@@ -6,6 +6,7 @@ import Panneau, { BoutonAction } from "../../components/Panneau";
 import { Libelle } from "../../components/ui";
 import { fcfa } from "../../utils/format";
 import { ONGLETS_CUISINE } from "./onglets";
+import NotificationsCommandes from "./Notifications";
 
 const TYPES = { principal: "Plat principal", sans_allergene: "Sans allergène", accompagnement: "Accompagnement" };
 const champ = "mt-1.5 h-12 w-full rounded-[12px] border border-[#EBEBEB] bg-white px-3 text-[16px] outline-none focus:border-[#222222]";
@@ -31,7 +32,7 @@ export default function Menus() {
   const plat = plats.find((p) => String(p.id) === String(f.plat_id));
 
   return (
-    <EspaceLayout titre="Menus de la semaine" onglets={ONGLETS_CUISINE} large
+    <EspaceLayout titre="Menus de la semaine" onglets={ONGLETS_CUISINE} outils={<NotificationsCommandes />} large
       action={<BoutonAction icone={Plus} onClick={() => { setF(VIDE()); setEdition("nouveau"); }}>Publier un plat</BoutonAction>}>
       <Alerte ok={msg.ok}>{msg.texte}</Alerte>
 

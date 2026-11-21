@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import EspaceLayout, { Alerte, Bouton, Champ } from "../../components/EspaceLayout";
 import Panneau, { BoutonAction } from "../../components/Panneau";
 import { ONGLETS_CUISINE } from "./onglets";
+import NotificationsCommandes from "./Notifications";
 
 export default function Ingredients() {
   const [ings, setIngs] = useState([]);
@@ -26,7 +27,7 @@ export default function Ingredients() {
   };
 
   return (
-    <EspaceLayout titre="Ingrédients et allergènes" onglets={ONGLETS_CUISINE} large
+    <EspaceLayout titre="Ingrédients et allergènes" onglets={ONGLETS_CUISINE} outils={<NotificationsCommandes />} large
       action={<BoutonAction icone={Plus} onClick={() => setOuvert(true)}>Ajouter</BoutonAction>}>
       <Alerte ok={msg.ok}>{msg.texte}</Alerte>
       <ul className="mt-6 divide-y divide-[#EBEBEB]">

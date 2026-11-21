@@ -10,6 +10,7 @@ import Reservation from "./pages/eleve/Reservation";
 import Quantite from "./pages/eleve/Quantite";
 import Horaire from "./pages/eleve/Horaire";
 import Place from "./pages/eleve/Place";
+import MenusAVenir from "./pages/eleve/MenusAVenir";
 import Connexion from "./pages/pro/Connexion";
 import Comptoir from "./pages/agent/Comptoir";
 import ParentAccueil from "./pages/parent/ParentAccueil";
@@ -29,6 +30,9 @@ import Creneaux from "./pages/admin/Creneaux";
 import Salle from "./pages/admin/Salle";
 import Parametres from "./pages/admin/Parametres";
 import Portions from "./pages/admin/Portions";
+import Statistiques from "./pages/admin/Statistiques";
+import Eleves from "./pages/admin/Eleves";
+import StatistiquesCuisine from "./pages/cuisine/Statistiques";
 import Appel from "./pages/enseignant/Appel";
 
 const R = (roles, el) => <RequireAuth roles={roles}>{el}</RequireAuth>;
@@ -41,6 +45,15 @@ export default function App() {
           <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/borne" element={<Login borne />} />
+                <Route
+                  path="/menus"
+                  element={
+                    <RequireAuth>
+                      <MenusAVenir />
+                    </RequireAuth>
+                  }
+                />
                 <Route
                   path="/"
                   element={
@@ -100,10 +113,13 @@ export default function App() {
                 <Route path="/cuisine" element={R(["cuisine", "admin"], <Service />)} />
                 <Route path="/cuisine/salle" element={R(["cuisine", "admin"], <SalleCuisine />)} />
                 <Route path="/cuisine/retours" element={R(["cuisine", "admin"], <Retours />)} />
+                <Route path="/cuisine/statistiques" element={R(["cuisine", "admin"], <StatistiquesCuisine />)} />
                 <Route path="/cuisine/menus" element={R(["cuisine", "admin"], <Menus />)} />
                 <Route path="/cuisine/plats" element={R(["cuisine", "admin"], <Plats />)} />
                 <Route path="/cuisine/ingredients" element={R(["cuisine", "admin"], <Ingredients />)} />
                 <Route path="/admin" element={R(["admin"], <TableauDeBord />)} />
+                <Route path="/admin/statistiques" element={R(["admin"], <Statistiques />)} />
+                <Route path="/admin/eleves" element={R(["admin"], <Eleves />)} />
                 <Route path="/admin/creneaux" element={R(["admin"], <Creneaux />)} />
                 <Route path="/admin/salle" element={R(["admin"], <Salle />)} />
                 <Route path="/admin/portions" element={R(["admin"], <Portions />)} />

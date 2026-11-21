@@ -7,6 +7,7 @@ import { useI18n } from "../../utils/i18n";
 import { decouperNomPlat, fcfa } from "../../utils/format";
 import { BackHeader, BottomCTA, SelectCard } from "../../components/ui";
 import { titreStyle } from "../../utils/tokens";
+import { libelleJour } from "../../utils/jour";
 
 const LIBELLE_TYPE = {
   principal: "Plat du jour",
@@ -72,7 +73,7 @@ export default function Reservation() {
       <OptionCarte
         option={o}
         actif={choix?.menu_jour_id === o.menu_jour_id}
-        onClick={() => choisirPlat(o)}
+        onClick={() => choisirPlat({ ...o, date: menu.date, vague_ouverte: menu.vague_ouverte, heure_recreation: menu.heure_recreation })}
       />
     </li>
   );
@@ -91,7 +92,7 @@ export default function Reservation() {
             </div>
           )}
           <span className="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-[12px] font-medium text-[#222222] shadow-[0_2px_8px_rgba(0,0,0,0.12)]">
-            Au menu aujourd'hui
+            Au menu {menu ? libelleJour(menu.date) : ""}
           </span>
         </div>
 

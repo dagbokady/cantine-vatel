@@ -25,3 +25,10 @@ export const postReservation = (payload) =>
   api.post("/eleve/reservations", payload).then((r) => r.data);
 
 export const annulerReservation = (id) => api.delete(`/eleve/reservations/${id}`);
+
+// Menus communiqués à l'avance (consultation), filtrés selon les allergies.
+export const getMenus = () => api.get("/eleve/menus").then((r) => r.data);
+
+// Le jour même, à partir de la récréation : rattacher la commande à une vague et une place.
+export const choisirVague = (id, payload) =>
+  api.put(`/eleve/reservations/${id}/vague`, payload).then((r) => r.data);

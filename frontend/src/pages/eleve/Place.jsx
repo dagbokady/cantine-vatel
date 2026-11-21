@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSalle, postReservation } from "../../api/eleve";
+import { choisirVague, getSalle, postReservation } from "../../api/eleve";
 import PlanSalle, { ChaiseIcone } from "../../components/eleve/PlanSalle";
 import { Shuffle } from "lucide-react";
 import { BackHeader, BottomCTA } from "../../components/ui";
@@ -54,7 +54,9 @@ export default function Place() {
     setErreur("");
     setEnvoi(true);
     try {
-      const res = await postReservation({
+      const res = etat.reservationId
+        ? await choisirVague(etat.reservationId, { creneau_id: etat.creneau.id, place_id: etat.place.id })
+        : await postReservation({
         menu_jour_id: etat.plat.menu_jour_id,
         creneau_id: etat.creneau.id,
         place_id: etat.place.id,

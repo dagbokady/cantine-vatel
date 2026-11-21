@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
-import { UtensilsCrossed } from "lucide-react";
+import { Clock3, UtensilsCrossed } from "lucide-react";
 import { annulerReservation } from "../../api/eleve";
 import { useReservation } from "../../hooks/useReservation";
 import { fcfa, formatHeure, tiersEnFraction } from "../../utils/format";
 import { titreStyle } from "../../utils/tokens";
 import { Avatar, Libelle } from "../ui";
+import { estAujourdhui, estBorne, libelleJour } from "../../utils/jour";
+import FinBorne from "./FinBorne";
 
 function secondesJusquA(hhmmss) {
   const [h, m] = hhmmss.split(":").map(Number);
@@ -29,8 +31,9 @@ function Ligne({ label, valeur }) {
 
 export default function EcranReservationEnCours({ me, reservation, onAnnulee }) {
   const navigate = useNavigate();
-  const { reset } = useReservation();
-  const debut = reservation.creneau.heure_debut;
+  const { reset, choisirVaguePour } = useReservation();
+  const aChoisir = reservation.vague_a_choisir;
+  const debut = reservation.creneau?.heure_debut ?? "00:00:00";
   const [sec, setSec] = useState(() => secondesJusquA(debut));
   const [confirmer, setConfirmer] = useState(false);
   const [envoi, setEnvoi] = useState(false);
@@ -79,8 +82,32 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
       <h1 className="mt-4 text-[28px] font-medium text-[#222222]" style={titreStyle}>
         Ma réservation
       </h1>
+      {!estAujourdhui(reservation.date) && (
+        <p className="mt-1 text-[15px] text-[#717171]">Repas de <span className="font-medium text-[#222222]">{libelleJour(reservation.date)}</span></p>
+      )}
 
-      {!servie && (
+      {estBorne() && <FinBorne />}
+
+      {aChoisir && (
+        <section className="mt-5 rounded-[22px] bg-[#FFF0ED] p-5">
+          <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[#FF5A5F]">
+            <Clock3 size={15} aria-hidden="true" /> Vague à choisir
+          </p>
+          <p className="mt-2 text-[16px] leading-snug text-[#222222]">
+            {reservation.choix_vague_ouvert
+              ? "C'est la récréation : choisis ta vague et ta place pour obtenir ton ticket."
+              : `Ton repas est commandé. Tu choisiras ta vague ${estAujourdhui(reservation.date) ? "" : `${libelleJour(reservation.date)} `}à partir de ${formatHeure(reservation.heure_recreation ?? "10:00")}.`}
+          </p>
+          {reservation.choix_vague_ouvert && (
+            <button type="button" onClick={() => { choisirVaguePour(reservation); navigate("/reservation/horaire"); }}
+              className="mt-4 h-[52px] w-full rounded-full bg-[#222222] text-[16px] font-medium text-white hover:bg-black">
+              Choisir ma vague
+            </button>
+          )}
+        </section>
+      )}
+
+      {!servie && !aChoisir && reservation.ticket && (
         <section className="mt-5 flex flex-col items-center">
           <Libelle>Ton ticket</Libelle>
           <div className="mt-3 rounded-[16px] border border-[#EBEBEB] bg-white p-4">
@@ -104,17 +131,21 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
 
       <section className="mt-2 divide-y divide-[#EBEBEB]">
         <Ligne label="Portion" valeur={`${tiersEnFraction(reservation.tiers)} · ${fcfa(reservation.prix)}`} />
-        <Ligne
-          label="Créneau"
-          valeur={`${formatHeure(debut)} – ${formatHeure(reservation.creneau.heure_fin)}`}
-        />
-        <Ligne
-          label="Place"
-          valeur={`Table ${reservation.place.table_nom.replace(/^T/, "")} · place ${reservation.place.numero}`}
-        />
+        {reservation.creneau && (
+          <Ligne
+            label="Créneau"
+            valeur={`${formatHeure(debut)} – ${formatHeure(reservation.creneau.heure_fin)}`}
+          />
+        )}
+        {reservation.place && (
+          <Ligne
+            label="Place"
+            valeur={`Table ${reservation.place.table_nom.replace(/^T/, "")} · place ${reservation.place.numero}`}
+          />
+        )}
       </section>
 
-      <section className="mt-6 rounded-[16px] bg-[#222222] px-5 py-6 text-center text-white">
+      {!aChoisir && <section className="mt-6 rounded-[16px] bg-[#222222] px-5 py-6 text-center text-white">
         {servie ? (
           <p className="text-[24px] font-medium" style={titreStyle}>Bon appétit !</p>
         ) : sec > 0 ? (
@@ -127,7 +158,7 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
         ) : (
           <p className="text-[28px] font-medium" style={titreStyle}>C'est l'heure</p>
         )}
-      </section>
+      </section>}
 
 
       {erreur && (
@@ -154,7 +185,9 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
           </button>
           <p className="mt-2 text-center text-[13px] text-[#B0B0B0]">
             {reservation.annulable
-              ? `Annulation remboursée jusqu'à ${cloture}.`
+              ? estAujourdhui(reservation.date)
+                ? `Annulation remboursée jusqu'à ${cloture}.`
+                : `Annulation remboursée jusqu'à ${cloture}, ${libelleJour(reservation.date)}.`
               : `Annulation impossible après ${cloture} : la cuisine prépare déjà ton repas.`}
           </p>
         </div>

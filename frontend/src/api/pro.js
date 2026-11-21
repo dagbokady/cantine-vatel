@@ -42,8 +42,19 @@ export const getVague = (cle, date, mode) => get(`/cuisine/vagues/${cle}`, { dat
 export const getSalleCuisine = (date, vague, mode) => get("/cuisine/salle", { date, vague, mode });
 export const envoyerRetours = (date, retours, mode) => put("/cuisine/retours", { date, retours, mode });
 export const getStatsEleve = (id) => get(`/cuisine/eleves/${id}/stats`);
+export const getReglagesCuisine = () => get("/cuisine/reglages");
+export const majReglagesCuisine = (delai_preparation_min) => put("/cuisine/reglages", { delai_preparation_min });
+export const getStatsCuisine = (params) => get("/cuisine/statistiques", params);
 
 // Admin
+export const getAujourdhui = () => get("/admin/aujourdhui");
+export const getStatistiques = (params) => get("/admin/statistiques", params);
+export const getClassesScolarite = () => get("/admin/scolarite/classes");
+export const creerClasse = (body) => post("/admin/scolarite/classes", body);
+export const majClasse = (id, body) => put(`/admin/scolarite/classes/${id}`, body);
+export const getElevesScolarite = (params) => get("/admin/scolarite/eleves", params);
+export const creerEleve = (body) => post("/admin/scolarite/eleves", body);
+export const majEleve = (id, body) => put(`/admin/scolarite/eleves/${id}`, body);
 export const getDashboard = (date) => get("/admin/dashboard", date ? { date } : undefined);
 export const getParametres = () => get("/admin/parametres");
 export const putParametres = (body) => put("/admin/parametres", body);

@@ -12,6 +12,7 @@ from ..schemas.auth import (
     UserLoginRequest,
     UserTokenResponse,
 )
+from ..services.scolarite import normaliser_matricule
 from ..services.auth import (
     authenticate_eleve,
     authenticate_user,
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, db: Session = Depends(get_db)):
-    eleve = authenticate_eleve(db, body.matricule, body.pin)
+    eleve = authenticate_eleve(db, normaliser_matricule(body.matricule), body.pin)
     if eleve is None:
         raise HTTPException(status_code=401, detail="Matricule ou PIN incorrect.")
     token = create_token(eleve)
@@ -38,7 +39,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/pin", response_model=TokenResponse)
 def set_pin(body: SetPinRequest, db: Session = Depends(get_db)):
-    eleve = db.scalars(select(Eleve).where(Eleve.matricule == body.matricule)).first()
+    eleve = db.scalars(select(Eleve).where(Eleve.matricule == normaliser_matricule(body.matricule))).first()
     if eleve is None:
         raise HTTPException(status_code=404, detail="Matricule inconnu.")
     if eleve.pin_hash is not None:

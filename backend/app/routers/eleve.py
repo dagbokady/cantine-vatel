@@ -1,7 +1,7 @@
 from datetime import date as _date
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -11,6 +11,7 @@ from ..models import (
     Creneau,
     Eleve,
     MenuJour,
+    Parametres,
     Place,
     Plat,
     Reservation,
@@ -25,6 +26,7 @@ from ..schemas.eleve import (
     HistoriqueReservation,
     HistoriqueTransaction,
     MeResponse,
+    MenuAVenir,
     MenuDuJourResponse,
     PlaceLite,
     PlaceSalle,
@@ -33,9 +35,10 @@ from ..schemas.eleve import (
     ReservationDuJourResponse,
     SalleResponse,
     TableSalleLite,
+    VagueChoix,
 )
-from ..services.eleve import commandes_ouvertes, options_menu_du_jour
-from ..services.reservations import annuler_reservation, creer_reservation
+from ..services.eleve import options_menu_du_jour
+from ..services.reservations import annuler_reservation, choisir_vague, creer_reservation, heure_limite, jour_de_commande
 from ..services.tickets import ticket_pour
 
 router = APIRouter(prefix="/eleve", tags=["eleve"])
@@ -59,16 +62,37 @@ def menu_du_jour(
     eleve: Eleve = Depends(get_current_eleve),
     db: Session = Depends(get_db),
 ):
-    today = _date.today()
-    ouvertes, params = commandes_ouvertes(db, datetime.now())
-    compatibles, incompatibles = options_menu_du_jour(db, eleve.allergies or [], today)
+    """Menu commandable maintenant : aujourd'hui, ou demain à partir de l'ouverture de la veille."""
+    params = db.get(Parametres, 1)
+    jour, vague_ouverte = jour_de_commande(db, params, datetime.now())
+    compatibles, incompatibles = options_menu_du_jour(db, eleve.allergies or [], jour or _date.today())
     return MenuDuJourResponse(
-        date=today,
-        commandes_ouvertes=ouvertes,
+        date=jour or _date.today(),
+        commandes_ouvertes=jour is not None,
         cloture_commandes=params.cloture_commandes,
+        vague_ouverte=vague_ouverte,
+        heure_recreation=params.heure_recreation,
         compatibles=compatibles,
         incompatibles=incompatibles,
     )
+
+
+@router.get("/menus", response_model=list[MenuAVenir])
+def menus_a_venir(
+    eleve: Eleve = Depends(get_current_eleve),
+    db: Session = Depends(get_db),
+):
+    """Menus communiqués à l'avance (consultation), filtrés selon les allergies de l'élève."""
+    today = _date.today()
+    jour_cmd, _ = jour_de_commande(db, db.get(Parametres, 1), datetime.now())
+    dates = db.scalars(
+        select(MenuJour.date).where(MenuJour.date >= today, MenuJour.date < today + timedelta(days=8)).distinct().order_by(MenuJour.date)
+    ).all()
+    out = []
+    for d in dates:
+        compatibles, incompatibles = options_menu_du_jour(db, eleve.allergies or [], d)
+        out.append(MenuAVenir(date=d, commandable=d == jour_cmd, compatibles=compatibles, incompatibles=incompatibles))
+    return out
 
 
 @router.get("/creneaux", response_model=CreneauxJourResponse)
@@ -95,10 +119,11 @@ def creneaux(
     ).all()
     occupe = {cid: n for cid, n in occ_rows}
 
-    # Créneaux déjà commencés : plus réservables (R5).
+    # Vagues dont l'heure limite (début moins délai de préparation) est passée : plus réservables.
     maintenant = datetime.now()
     if jour == maintenant.date():
-        rows = [c for c in rows if c.heure_debut > maintenant.time()]
+        delai = db.get(Parametres, 1).delai_preparation_min
+        rows = [c for c in rows if maintenant.time() < heure_limite(c.heure_debut, delai)]
     items = [
         CreneauDispo(
             id=c.id,
@@ -167,6 +192,27 @@ def salle(
     )
 
 
+def _sortie(reservation: Reservation, eleve: Eleve, db: Session) -> ReservationCreated:
+    menu = db.get(MenuJour, reservation.menu_jour_id)
+    # Pas de ticket tant que la vague n'est pas choisie : le comptoir n'aurait rien à vérifier.
+    ticket = ticket_pour(reservation, eleve, menu.date) if reservation.creneau_id else None
+    return ReservationCreated(
+        id=reservation.id,
+        menu_jour_id=reservation.menu_jour_id,
+        creneau_id=reservation.creneau_id,
+        place_id=reservation.place_id,
+        tiers=reservation.tiers,
+        prix=reservation.prix,
+        statut=reservation.statut,
+        ticket=ticket,
+    )
+
+
+def _place_prise() -> HTTPException:
+    # Unicité d'une place sur un créneau : peut sauter juste avant le commit.
+    return HTTPException(status_code=409, detail="Cette place vient d'être prise, choisis-en une autre.")
+
+
 @router.post("/reservations", response_model=ReservationCreated, status_code=201)
 def post_reservation(
     body: ReservationCreate,
@@ -186,25 +232,26 @@ def post_reservation(
         db.commit()
     except IntegrityError:
         db.rollback()
-        # Unicité d'une place sur un créneau peut sauter juste avant le commit.
-        from fastapi import HTTPException
-
-        raise HTTPException(
-            status_code=409, detail="Cette place vient d'être prise, choisis-en une autre."
-        )
-
+        raise _place_prise()
     db.refresh(reservation)
-    ticket = ticket_pour(reservation, eleve, _date.today())
-    return ReservationCreated(
-        id=reservation.id,
-        menu_jour_id=reservation.menu_jour_id,
-        creneau_id=reservation.creneau_id,
-        place_id=reservation.place_id,
-        tiers=reservation.tiers,
-        prix=reservation.prix,
-        statut=reservation.statut,
-        ticket=ticket,
-    )
+    return _sortie(reservation, eleve, db)
+
+
+@router.put("/reservations/{reservation_id}/vague", response_model=ReservationCreated)
+def put_vague(
+    reservation_id: int,
+    body: VagueChoix,
+    eleve: Eleve = Depends(get_current_eleve),
+    db: Session = Depends(get_db),
+):
+    try:
+        reservation = choisir_vague(db, eleve, reservation_id, body.creneau_id, body.place_id, datetime.now())
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise _place_prise()
+    db.refresh(reservation)
+    return _sortie(reservation, eleve, db)
 
 
 @router.get("/reservation-du-jour", response_model=ReservationDuJourResponse | None)
@@ -212,42 +259,42 @@ def reservation_du_jour(
     eleve: Eleve = Depends(get_current_eleve),
     db: Session = Depends(get_db),
 ):
-    today = _date.today()
+    """Commande active du jour, ou à défaut celle du lendemain (passée la veille, sans vague)."""
+    now = datetime.now()
+    today = now.date()
     row = db.execute(
         select(Reservation, MenuJour, Plat, Creneau, Place, TableSalle)
         .join(MenuJour, MenuJour.id == Reservation.menu_jour_id)
         .join(Plat, Plat.id == MenuJour.plat_id)
-        .join(Creneau, Creneau.id == Reservation.creneau_id)
-        .join(Place, Place.id == Reservation.place_id)
-        .join(TableSalle, TableSalle.id == Place.table_id)
-        .where(
-            Reservation.eleve_id == eleve.id,
-            MenuJour.date == today,
-            Reservation.statut != "annulee",
-        )
-        .order_by(desc(Reservation.id))
+        .outerjoin(Creneau, Creneau.id == Reservation.creneau_id)
+        .outerjoin(Place, Place.id == Reservation.place_id)
+        .outerjoin(TableSalle, TableSalle.id == Place.table_id)
+        .where(Reservation.eleve_id == eleve.id, MenuJour.date >= today, Reservation.statut != "annulee")
+        .order_by(MenuJour.date, desc(Reservation.id))
     ).first()
     if row is None:
         return None
     res, menu, plat, creneau, place, table = row
-    _, params = commandes_ouvertes(db, datetime.now())
+    params = db.get(Parametres, 1)
+    jour_cmd, vague_ouverte = jour_de_commande(db, params, now)
+    a_choisir = creneau is None
     return ReservationDuJourResponse(
-        ticket=ticket_pour(res, eleve, menu.date),
-        annulable=res.statut == "commandee" and datetime.now().time() < params.cloture_commandes,
+        ticket=ticket_pour(res, eleve, menu.date) if creneau else None,
+        annulable=res.statut == "commandee" and (menu.date > today or now.time() < params.cloture_commandes),
         cloture_commandes=params.cloture_commandes,
         id=res.id,
+        date=menu.date,
         menu_jour_id=res.menu_jour_id,
         plat_nom=plat.nom,
         plat_photo=plat.photo,
         tiers=res.tiers,
         prix=res.prix,
         statut=res.statut,
-        creneau=CreneauLite(
-            id=creneau.id,
-            heure_debut=creneau.heure_debut,
-            heure_fin=creneau.heure_fin,
-        ),
-        place=PlaceLite(id=place.id, table_nom=table.nom, numero=place.numero),
+        creneau=CreneauLite(id=creneau.id, heure_debut=creneau.heure_debut, heure_fin=creneau.heure_fin) if creneau else None,
+        place=PlaceLite(id=place.id, table_nom=table.nom, numero=place.numero) if place else None,
+        vague_a_choisir=a_choisir,
+        choix_vague_ouvert=a_choisir and menu.date == today and jour_cmd == today and vague_ouverte,
+        heure_recreation=params.heure_recreation,
     )
 
 

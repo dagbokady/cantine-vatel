@@ -1,7 +1,7 @@
 from datetime import date as _date
 from datetime import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -25,6 +25,8 @@ from ..models import (
 )
 from ..services.service_cuisine import suggestion_out
 from ..services.dashboard import tableau_de_bord
+from ..services import scolarite
+from ..services.statistiques import aujourdhui, stats_jour, stats_mois
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 admin = require_roles("admin")
@@ -34,6 +36,7 @@ class ParametresIn(BaseModel):
     ouverture_commandes: time
     cloture_commandes: time
     decouvert_max: int = Field(ge=0, le=20000)
+    heure_recreation: time = time(10, 0)  # ouverture du choix de la vague, le jour même
 
 
 class NiveauIn(BaseModel):
@@ -59,16 +62,22 @@ class PlaceIn(BaseModel):
 @router.get("/parametres", response_model=ParametresIn)
 def get_parametres(_: User = Depends(admin), db: Session = Depends(get_db)):
     p = db.get(Parametres, 1)
-    return ParametresIn(ouverture_commandes=p.ouverture_commandes, cloture_commandes=p.cloture_commandes, decouvert_max=p.decouvert_max)
+    return ParametresIn(
+        ouverture_commandes=p.ouverture_commandes,
+        cloture_commandes=p.cloture_commandes,
+        decouvert_max=p.decouvert_max,
+        heure_recreation=p.heure_recreation,
+    )
 
 
 @router.put("/parametres", response_model=ParametresIn)
 def put_parametres(body: ParametresIn, _: User = Depends(admin), db: Session = Depends(get_db)):
     p = db.get(Parametres, 1)
-    p.ouverture_commandes, p.cloture_commandes, p.decouvert_max = (
+    p.ouverture_commandes, p.cloture_commandes, p.decouvert_max, p.heure_recreation = (
         body.ouverture_commandes,
         body.cloture_commandes,
         body.decouvert_max,
+        body.heure_recreation,
     )
     db.commit()
     return body
@@ -195,6 +204,79 @@ def maj_place(place_id: int, body: PlaceIn, _: User = Depends(admin), db: Sessio
 @router.get("/dashboard")
 def dashboard(date: _date | None = None, _: User = Depends(admin), db: Session = Depends(get_db)):
     return tableau_de_bord(db, date or _date.today())
+
+
+# ---------- Suivi du jour et statistiques ----------
+
+
+@router.get("/aujourdhui")
+def suivi_du_jour(_: User = Depends(admin), db: Session = Depends(get_db)):
+    """Journée réelle en cours uniquement (fuseau de l'établissement) : aucun paramètre de date."""
+    return stats_jour(db, aujourdhui())
+
+
+@router.get("/statistiques")
+def statistiques(
+    periode: str = Query("mois", pattern="^(jour|mois)$"),
+    date: _date | None = None,
+    mois: str | None = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    _: User = Depends(admin),
+    db: Session = Depends(get_db),
+):
+    today = aujourdhui()
+    if periode == "jour":
+        return stats_jour(db, date or today)
+    annee, m = (int(x) for x in mois.split("-")) if mois else (today.year, today.month)
+    return stats_mois(db, annee, m)
+
+
+# ---------- Scolarité : classes et élèves ----------
+
+
+class ClasseIn(BaseModel):
+    nom: str = Field(min_length=1, max_length=32)
+    niveau_id: int
+
+
+class EleveIn(BaseModel):
+    matricule: str = Field(min_length=1, max_length=32)
+    nom: str = Field(min_length=2, max_length=120)
+    classe_id: int
+
+
+@router.get("/scolarite/classes")
+def scolarite_classes(_: User = Depends(admin), db: Session = Depends(get_db)):
+    return scolarite.lister_classes(db)
+
+
+@router.post("/scolarite/classes", status_code=201)
+def scolarite_creer_classe(body: ClasseIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    return scolarite.creer_classe(db, body.nom, body.niveau_id)
+
+
+@router.put("/scolarite/classes/{classe_id}")
+def scolarite_modifier_classe(classe_id: int, body: ClasseIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    return scolarite.modifier_classe(db, classe_id, body.nom, body.niveau_id)
+
+
+@router.get("/scolarite/eleves")
+def scolarite_eleves(
+    classe_id: int | None = None,
+    q: str | None = Query(None, max_length=60),
+    _: User = Depends(admin),
+    db: Session = Depends(get_db),
+):
+    return scolarite.lister_eleves(db, classe_id, q)
+
+
+@router.post("/scolarite/eleves", status_code=201)
+def scolarite_creer_eleve(body: EleveIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    return scolarite.creer_eleve(db, body.matricule, body.nom, body.classe_id)
+
+
+@router.put("/scolarite/eleves/{eleve_id}")
+def scolarite_modifier_eleve(eleve_id: int, body: EleveIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    return scolarite.modifier_eleve(db, eleve_id, body.matricule, body.nom, body.classe_id)
 
 
 

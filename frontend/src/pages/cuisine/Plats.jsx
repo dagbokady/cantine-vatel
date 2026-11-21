@@ -5,6 +5,7 @@ import EspaceLayout, { Alerte, Bouton, Carte, Champ } from "../../components/Esp
 import Panneau, { BoutonAction } from "../../components/Panneau";
 import { fcfa } from "../../utils/format";
 import { ONGLETS_CUISINE } from "./onglets";
+import NotificationsCommandes from "./Notifications";
 
 const VIDE = { nom: "", prix: 1500, ingredient_ids: [], sans_allergene_de: "", photo: null };
 
@@ -42,7 +43,7 @@ export default function Plats() {
   };
 
   return (
-    <EspaceLayout titre="Plats" onglets={ONGLETS_CUISINE} large
+    <EspaceLayout titre="Plats" onglets={ONGLETS_CUISINE} outils={<NotificationsCommandes />} large
       action={<BoutonAction icone={Plus} onClick={() => setOuvert(true)}>Nouveau plat</BoutonAction>}>
       <Alerte ok={msg.ok}>{msg.texte}</Alerte>
 

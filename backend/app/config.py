@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     ticket_signing_key: str = ""  # Ed25519 PEM privée (PKCS8 non chiffré)
     # Comptoir : refuser un ticket hors de son créneau (désactivable pour une démo).
     comptoir_controle_creneau: bool = True
+    # Fuseau de l'établissement (Côte d'Ivoire) : définit « aujourd'hui » côté serveur.
+    fuseau_horaire: str = "Africa/Abidjan"
 
     @property
     def cors_origins_list(self) -> list[str]:

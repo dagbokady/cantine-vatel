@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { UtensilsCrossed } from "lucide-react";
+import { CalendarDays, UtensilsCrossed } from "lucide-react";
 import { Avatar } from "../ui";
 import { titreStyle } from "../../utils/tokens";
 
 const MESSAGES = {
   vide: ["Le menu du jour n'est pas encore prêt", "Reviens un peu plus tard."],
-  fermees: ["Les commandes ouvrent ce soir", "Les commandes ouvrent la veille au soir."],
+  fermees: ["Les commandes ouvrent ce soir", "Les commandes ouvrent la veille au soir. Le menu est déjà visible."],
   epuise: ["Toutes les portions ont été réservées", "Reviens un peu plus tard."],
 };
 
@@ -40,6 +40,10 @@ export default function EcranPatientez({ me, raison }) {
         {titre}
       </h1>
       <p className="mt-2 text-[15px] text-[#717171]">{sous}</p>
+      <button type="button" onClick={() => navigate("/menus")}
+          className="mt-6 inline-flex h-10 items-center gap-2 rounded-full border border-[#EBEBEB] px-4 text-[14px] font-medium text-[#222222] hover:border-[#222222]">
+          <CalendarDays size={16} aria-hidden="true" /> Menus à venir
+        </button>
     </div>
   );
 }
