@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,7 +12,21 @@ from .routers import admin, agent, auth, cuisine, eleve, enseignant, parent
 from .schemas.eleve import PublicKeyResponse
 from .services.tickets import public_key_pem
 
-app = FastAPI(title="Cantine Vatel")
+@asynccontextmanager
+async def lifespan(_app):
+    """Base d'allergènes et d'ingrédients toujours présente (ajouts seulement)."""
+    from .db import SessionLocal
+    from .referentiel import charger_referentiel
+
+    try:
+        with SessionLocal() as db:
+            charger_referentiel(db)
+    except Exception as exc:  # base non migrée : l'API démarre quand même
+        print(f"Référentiel non chargé : {exc}")
+    yield
+
+
+app = FastAPI(title="Cantine Vatel", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

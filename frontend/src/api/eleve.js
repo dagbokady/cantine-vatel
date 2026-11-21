@@ -32,3 +32,6 @@ export const getMenus = () => api.get("/eleve/menus").then((r) => r.data);
 // Le jour même, à partir de la récréation : rattacher la commande à une vague et une place.
 export const choisirVague = (id, payload) =>
   api.put(`/eleve/reservations/${id}/vague`, payload).then((r) => r.data);
+
+// Avis sur le repas servi : 1 aimé, -1 pas aimé.
+export const noterRepas = (id, avis) => api.put(`/eleve/reservations/${id}/avis`, { avis });

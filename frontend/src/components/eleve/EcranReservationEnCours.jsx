@@ -8,7 +8,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-import { annulerReservation } from "../../api/eleve";
+import { annulerReservation, getReservationDuJour } from "../../api/eleve";
 import { useReservation } from "../../hooks/useReservation";
 import { fcfa, formatHeure, tiersEnFraction } from "../../utils/format";
 import { titreStyle } from "../../utils/tokens";
@@ -16,6 +16,7 @@ import { Avatar, Libelle } from "../ui";
 import { estAujourdhui, estBorne, libelleJour } from "../../utils/jour";
 import FinBorne from "./FinBorne";
 import CartePlace from "./CartePlace";
+import EcranBonAppetit from "./EcranBonAppetit";
 
 function secondesJusquA(hhmmss) {
   const [h, m] = hhmmss.split(":").map(Number);
@@ -40,9 +41,15 @@ function Ligne({ label, valeur }) {
 
 export default function EcranReservationEnCours({
                                                   me,
-                                                  reservation,
+                                                  reservation: initiale,
                                                   onAnnulee,
                                                 }) {
+  const [reservation, setReservation] = useState(initiale);
+  const [precedente, setPrecedente] = useState(initiale);
+  if (precedente !== initiale) {
+    setPrecedente(initiale);
+    setReservation(initiale);
+  }
   const navigate = useNavigate();
   const { reset, choisirVaguePour } = useReservation();
 
@@ -64,6 +71,21 @@ export default function EcranReservationEnCours({
   }, [debut]);
 
   const servie = reservation.statut === "servie";
+  const cleReport = `avis-plus-tard-${reservation.id}`;
+  const [reporte, setReporte] = useState(() => {
+    try { return sessionStorage.getItem(cleReport) === "1"; } catch { return false; }
+  });
+  const noter = !estBorne() && servie && reservation.avis == null && !reporte;
+
+  // Le scan au comptoir passe la commande à « servie » : on surveille pour lancer « Bon appétit ».
+  useEffect(() => {
+    if (servie) return;
+    const id = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      getReservationDuJour().then((r) => r && r.id === reservation.id && setReservation(r)).catch(() => {});
+    }, 5000);
+    return () => clearInterval(id);
+  }, [servie, reservation.id]);
   const cloture = formatHeure(reservation.cloture_commandes);
 
   const annuler = async () => {
@@ -89,6 +111,16 @@ export default function EcranReservationEnCours({
 
   return (
       <main className="min-h-dvh bg-white text-[#222222]">
+        {noter && (
+            <EcranBonAppetit
+                reservation={reservation}
+                onTermine={(avis) => setReservation((r) => ({ ...r, avis }))}
+                onPlusTard={() => {
+                  try { sessionStorage.setItem(cleReport, "1"); } catch { /* navigation privée */ }
+                  setReporte(true);
+                }}
+            />
+        )}
         <div className="mx-auto w-full max-w-[760px] px-4 pb-[calc(32px+env(safe-area-inset-bottom))] sm:px-8">
 
           {/* En-tête */}
@@ -278,6 +310,19 @@ export default function EcranReservationEnCours({
                       >
                         Ton repas a été servi.
                       </p>
+                      {reservation.avis != null ? (
+                          <p className="mt-3 text-[13px] text-white/65">
+                            Merci pour ton avis : {reservation.avis === 1 ? "tu as aimé" : "à améliorer"}.
+                          </p>
+                      ) : !estBorne() && (
+                          <button
+                              type="button"
+                              onClick={() => setReporte(false)}
+                              className="mt-5 inline-flex h-11 items-center rounded-full bg-white px-6 text-[14px] font-semibold text-[#222222]"
+                          >
+                            Noter mon plat
+                          </button>
+                      )}
                     </>
                 ) : sec > 0 ? (
                     <>

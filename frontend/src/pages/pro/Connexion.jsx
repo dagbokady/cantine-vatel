@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   ShieldCheck,
@@ -19,6 +19,7 @@ import { Alerte, Bouton, Champ } from "../../components/EspaceLayout";
 export default function Connexion() {
   const { loginUser, inscrireParent } = useAuth();
   const navigate = useNavigate();
+  const info = useLocation().state?.message;
 
   const [inscription, setInscription] = useState(false);
   const [f, setF] = useState({
@@ -192,12 +193,20 @@ export default function Connexion() {
                     placeholder="Votre mot de passe"
                 />
 
-                {inscription && (
+                {inscription ? (
                     <p className="mt-2 text-xs text-[#B0B0B0]">
                       6 caractères minimum.
                     </p>
+                ) : (
+                    <Link to="/pro/mot-de-passe" className="mt-2 inline-block py-1 text-[13px] font-medium text-[#717171] underline-offset-4 hover:text-[#222222] hover:underline">
+                      Mot de passe oublié ?
+                    </Link>
                 )}
               </div>
+
+              {info && !erreur && (
+                  <p role="status" className="rounded-2xl bg-[#F7F7F7] p-4 text-sm text-[#222222]">{info}</p>
+              )}
 
               {erreur && (
                   <div className="flex items-start gap-3 rounded-2xl border border-[#B30000]/10 bg-[#FFF0ED] p-4 text-sm text-[#B30000]">

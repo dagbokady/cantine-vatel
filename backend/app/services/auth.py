@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -57,5 +58,34 @@ def create_user_token(user: User) -> str:
 def authenticate_user(db: Session, identifiant: str, secret: str) -> User | None:
     user = db.scalars(select(User).where(User.identifiant == identifiant.strip().lower())).first()
     if user is None or not user.actif or not verify_pin(secret, user.secret_hash):
+        return None
+    return user
+
+
+# --------- Réinitialisation du mot de passe ---------
+RESET_LIFETIME = timedelta(minutes=30)
+ROLES_RESET = {"admin", "cuisine", "parent"}
+
+
+def _empreinte(user: User) -> str:
+    # Liée au mot de passe actuel : le lien devient invalide dès qu'il a servi.
+    return hashlib.sha256(user.secret_hash.encode()).hexdigest()[:16]
+
+
+def create_reset_token(user: User) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {"sub": str(user.id), "purpose": "reset", "h": _empreinte(user), "iat": now, "exp": now + RESET_LIFETIME}
+    return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
+
+
+def user_from_reset_token(db: Session, token: str) -> User | None:
+    try:
+        data = decode_token(token)
+    except jwt.PyJWTError:
+        return None
+    if data.get("purpose") != "reset":
+        return None
+    user = db.get(User, int(data["sub"]))
+    if user is None or not user.actif or user.role not in ROLES_RESET or data.get("h") != _empreinte(user):
         return None
     return user

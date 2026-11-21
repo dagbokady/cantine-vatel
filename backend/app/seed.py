@@ -15,6 +15,7 @@ from sqlalchemy import delete, func, select
 
 from .services.codes import nouveau_code
 from .seed_tests import appliquer_compositions
+from .referentiel import charger_referentiel
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal, engine
@@ -672,6 +673,7 @@ def demo_eleves(db, awa, eleve2, parent_awa, plats_by_name, creneaux, places, me
 
     # Composition des plats : accompagnements et piment personnalisables.
     appliquer_compositions(db)
+    charger_referentiel(db)
 
 
 def main() -> None:

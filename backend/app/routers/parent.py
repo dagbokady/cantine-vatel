@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..services.scolarite import normaliser_matricule
 from ..deps import get_db, require_roles
-from ..models import Allergene, Eleve, MenuJour, Notification, Plat, Reservation, Transaction, User
+from ..models import Allergene, Ingredient, IngredientAllergene, Eleve, MenuJour, Notification, Plat, Reservation, Transaction, User
 from ..schemas.parent import (
     AllergiesRequest,
     EnfantOut,
@@ -24,6 +24,8 @@ from ..schemas.parent import (
 )
 from ..services.eleve import _allergenes_par_plat, _ingredients_par_plat
 from ..services.paiement import creer_recharge, traiter_recharge
+
+from ..referentiel import ALLERGENES_PAR_CATEGORIE, CATEGORIE_DE
 
 router = APIRouter(prefix="/parent", tags=["parent"])
 parent_dep = require_roles("parent")
@@ -77,9 +79,22 @@ def rattacher(body: RattacherRequest, parent: User = Depends(parent_dep), db: Se
     return _out(e)
 
 
-@router.get("/allergenes", response_model=list[str])
+@router.get("/allergenes")
 def allergenes(_: User = Depends(parent_dep), db: Session = Depends(get_db)):
-    return list(db.scalars(select(Allergene.nom).order_by(Allergene.nom)))
+    """Allergènes groupés par catégorie, avec les ingrédients qui les portent (aide à la recherche)."""
+    rows = db.execute(
+        select(Allergene.nom, Ingredient.nom)
+        .outerjoin(IngredientAllergene, IngredientAllergene.allergene_id == Allergene.id)
+        .outerjoin(Ingredient, Ingredient.id == IngredientAllergene.ingredient_id)
+        .order_by(Allergene.nom)
+    ).all()
+    out: dict[str, dict] = {}
+    for alg, ing in rows:
+        a = out.setdefault(alg, {"nom": alg, "categorie": CATEGORIE_DE.get(alg, "Autres"), "ingredients": []})
+        if ing and ing != alg:
+            a["ingredients"].append(ing)
+    ordre = list(ALLERGENES_PAR_CATEGORIE)
+    return sorted(out.values(), key=lambda a: (ordre.index(a["categorie"]) if a["categorie"] in ordre else len(ordre), a["nom"]))
 
 
 @router.put("/enfants/{eleve_id}/allergies", response_model=EnfantOut)

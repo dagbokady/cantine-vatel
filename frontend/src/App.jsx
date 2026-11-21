@@ -15,6 +15,7 @@ import Horaire from "./pages/eleve/Horaire";
 import Place from "./pages/eleve/Place";
 import MenusAVenir from "./pages/eleve/MenusAVenir";
 import Connexion from "./pages/pro/Connexion";
+import { MotDePasseOublie, Reinitialiser } from "./pages/pro/MotDePasse";
 import Landing from "./pages/Landing";
 import Comptoir from "./pages/agent/Comptoir";
 import ParentAccueil from "./pages/parent/ParentAccueil";
@@ -118,6 +119,8 @@ export default function App() {
                   }
                 />
                 <Route path="/pro" element={<Connexion />} />
+                <Route path="/pro/mot-de-passe" element={<MotDePasseOublie />} />
+                <Route path="/pro/reinitialiser" element={<Reinitialiser />} />
                 <Route path="/comptoir" element={R(["agent", "admin"], <Comptoir />)} />
                 <Route path="/parent" element={R(["parent"], <ParentAccueil />)} />
                 <Route path="/parent/ajouter" element={R(["parent"], <AjouterEnfant />)} />

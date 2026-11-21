@@ -158,6 +158,11 @@ class ReservationDuJourResponse(BaseModel):
     vague_a_choisir: bool = False
     choix_vague_ouvert: bool = False
     heure_recreation: time | None = None
+    avis: int | None = None
+
+
+class AvisRequest(BaseModel):
+    avis: int = Field(ge=-1, le=1)
 
 
 class HistoriqueReservation(BaseModel):

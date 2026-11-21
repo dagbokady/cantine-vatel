@@ -34,3 +34,12 @@ class UserTokenResponse(BaseModel):
     token_type: str = "bearer"
     nom: str
     role: str
+
+
+class MotDePasseOubliRequest(BaseModel):
+    identifiant: str = Field(min_length=3, max_length=120)
+
+
+class ReinitialisationRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=1000)
+    mot_de_passe: str = Field(min_length=8, max_length=128)

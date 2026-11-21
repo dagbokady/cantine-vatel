@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { activerAcces, getAllergenes, getEnfants, getHistoriqueEnfant, majAllergies } from "../../api/pro";
-import { Pencil, Wallet } from "lucide-react";
+import { Pencil, Search, Wallet, X } from "lucide-react";
 import Recharge from "../../components/parent/Recharge";
 import EspaceLayout, { Alerte, Bouton } from "../../components/EspaceLayout";
 import Panneau, { BoutonAction } from "../../components/Panneau";
@@ -19,6 +19,75 @@ function Section({ titre, children, className = "" }) {
       <h2 className="mb-4 text-[20px] font-semibold" style={titreStyle}>{titre}</h2>
       {children}
     </section>
+  );
+}
+
+const sansAccent = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const maj = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
+function Puce({ nom, actif, detail, onClick }) {
+  return (
+    <button type="button" aria-pressed={actif} onClick={onClick}
+      className={`min-h-10 rounded-full border px-4 py-2 text-left text-[14px] leading-5 transition-colors ${actif ? "border-[#FF5A5F] bg-[#FFF0ED] font-medium text-[#222222]" : "border-[#EBEBEB] bg-white text-[#717171] hover:border-[#222222]"}`}>
+      {maj(nom)}
+      {detail && <span className="block text-[12px] font-normal text-[#B0B0B0]">{detail}</span>}
+    </button>
+  );
+}
+
+// Grande base : recherche par allergène ou par aliment (« crevette » trouve « crustacés »).
+function ChoixAllergies({ tous, choix, onChange }) {
+  const [q, setQ] = useState("");
+  const basculer = (a) => onChange(choix.includes(a) ? choix.filter((x) => x !== a) : [...choix, a].sort());
+  const r = sansAccent(q.trim());
+  const trouves = r ? tous.filter((a) => sansAccent(a.nom).includes(r) || a.ingredients.some((i) => sansAccent(i).includes(r))) : [];
+  const categories = [...new Set(tous.map((a) => a.categorie))];
+
+  return (
+    <div className="mt-4">
+      <label className="relative block">
+        <span className="sr-only">Rechercher un allergène ou un aliment</span>
+        <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#B0B0B0]" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Crevette, tomate, lait…"
+          className="h-12 w-full rounded-full border border-[#EBEBEB] bg-[#F7F7F7] pl-11 pr-11 text-[16px] outline-none placeholder:text-[#B0B0B0] focus:border-[#222222] focus:bg-white" />
+        {q && (
+          <button type="button" onClick={() => setQ("")} aria-label="Effacer la recherche"
+            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#717171] hover:bg-[#EBEBEB]">
+            <X size={16} />
+          </button>
+        )}
+      </label>
+
+      {choix.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {choix.map((a) => (
+            <button key={a} type="button" onClick={() => basculer(a)}
+              className="flex h-9 items-center gap-1.5 rounded-full bg-[#222222] pl-4 pr-3 text-[13px] font-medium text-white">
+              {maj(a)} <X size={14} />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {r ? (
+        <div className="mt-5 flex flex-wrap gap-2">
+          {trouves.length ? trouves.map((a) => {
+            const viaIngr = !sansAccent(a.nom).includes(r) && a.ingredients.filter((i) => sansAccent(i).includes(r));
+            return <Puce key={a.nom} nom={a.nom} actif={choix.includes(a.nom)} onClick={() => basculer(a.nom)}
+              detail={viaIngr ? `présent dans : ${viaIngr.slice(0, 3).join(", ")}` : null} />;
+          }) : <p className="text-[14px] text-[#717171]">Aucun résultat. Précise-le dans le régime ci-dessous.</p>}
+        </div>
+      ) : categories.map((c) => (
+        <div key={c} className="mt-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#717171]">{c}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {tous.filter((a) => a.categorie === c).map((a) => (
+              <Puce key={a.nom} nom={a.nom} actif={choix.includes(a.nom)} onClick={() => basculer(a.nom)} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -160,18 +229,7 @@ export default function Enfant() {
           </Bouton>
         }>
         <p className="text-[14px] text-[#717171]">Toi seul peux les modifier. Les plats concernés ne seront ni proposés ni servis.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {tous.map((a) => {
-            const actif = allergies.includes(a);
-            return (
-              <button key={a} type="button" aria-pressed={actif}
-                onClick={() => setAllergies(actif ? allergies.filter((x) => x !== a) : [...allergies, a].sort())}
-                className={`h-10 rounded-full border px-4 text-[14px] transition-colors ${actif ? "border-[#FF5A5F] bg-[#FFF0ED] font-medium text-[#222222]" : "border-[#EBEBEB] bg-white text-[#717171] hover:border-[#222222]"}`}>
-                {a.charAt(0).toUpperCase() + a.slice(1)}
-              </button>
-            );
-          })}
-        </div>
+        <ChoixAllergies tous={tous} choix={allergies} onChange={setAllergies} />
         <label className="mt-5 block text-[13px] font-medium">Régime
           <input value={regime} onChange={(e) => setRegime(e.target.value)} placeholder="ex. sans porc, végétarien"
             className="mt-1.5 h-12 w-full rounded-[12px] border border-[#EBEBEB] px-4 text-[16px] outline-none placeholder:text-[#B0B0B0] focus:border-[#222222]" />

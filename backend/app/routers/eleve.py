@@ -14,11 +14,13 @@ from ..models import (
     Parametres,
     Place,
     Plat,
+    Repas,
     Reservation,
     TableSalle,
     Transaction,
 )
 from ..schemas.eleve import (
+    AvisRequest,
     CreneauDispo,
     CreneauLite,
     CreneauxJourResponse,
@@ -306,7 +308,30 @@ def reservation_du_jour(
         vague_a_choisir=a_choisir,
         choix_vague_ouvert=a_choisir and menu.date == today and jour_cmd == today and vague_ouverte,
         heure_recreation=params.heure_recreation,
+        avis=db.scalar(select(Repas.avis).where(Repas.eleve_id == eleve.id, Repas.date == menu.date)),
     )
+
+
+@router.put("/reservations/{reservation_id}/avis", status_code=204)
+def noter_repas(
+    reservation_id: int,
+    body: AvisRequest,
+    eleve: Eleve = Depends(get_current_eleve),
+    db: Session = Depends(get_db),
+):
+    """Avis de l'élève sur le repas servi (1 aimé, -1 pas aimé, 0 efface). Alimente les statistiques cuisine."""
+    res = db.get(Reservation, reservation_id)
+    if res is None or res.eleve_id != eleve.id:
+        raise HTTPException(status_code=404, detail="Réservation introuvable.")
+    if res.statut != "servie":
+        raise HTTPException(status_code=409, detail="Tu pourras noter ton repas une fois servi.")
+    menu = db.get(MenuJour, res.menu_jour_id)
+    repas = db.scalar(select(Repas).where(Repas.eleve_id == eleve.id, Repas.date == menu.date))
+    if repas is None:
+        repas = Repas(eleve_id=eleve.id, date=menu.date, menu_commande_id=menu.id, menu_servi_id=menu.id, tiers=res.tiers)
+        db.add(repas)
+    repas.avis = body.avis or None
+    db.commit()
 
 
 @router.get("/historique", response_model=HistoriqueResponse)

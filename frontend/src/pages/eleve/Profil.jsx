@@ -12,7 +12,7 @@ import {
 
 import { getMe, getHistorique } from "../../api/eleve";
 import { useAuth } from "../../hooks/useAuth";
-import { useI18n } from "../../utils/i18n";
+import { LANGUES, localeDe, useI18n } from "../../utils/i18n";
 import { fcfa, tiersEnFraction } from "../../utils/format";
 import { Avatar, BackHeader, Libelle } from "../../components/ui";
 import { titreStyle } from "../../utils/tokens";
@@ -21,7 +21,7 @@ function dateCourte(iso, lang) {
   const [y, m, d] = iso.split("-").map(Number);
 
   const s = new Date(y, m - 1, d).toLocaleDateString(
-      lang === "en" ? "en-GB" : "fr-FR",
+      localeDe(lang),
       {
         weekday: "short",
         day: "numeric",
@@ -33,28 +33,26 @@ function dateCourte(iso, lang) {
 }
 
 function ChoixLangue() {
-  const { lang, setLang, t } = useI18n();
-
-  const bouton = (code, label) => (
-      <button
-          key={code}
-          type="button"
-          onClick={() => setLang(code)}
-          aria-pressed={lang === code}
-          className={`h-11 flex-1 rounded-full text-[14px] transition-colors ${
-              lang === code
-                  ? "bg-[#222222] font-medium text-white"
-                  : "bg-[#F7F7F7] text-[#222222] hover:bg-[#EBEBEB]"
-          }`}
-      >
-        {label}
-      </button>
-  );
+  const { lang, setLang } = useI18n();
 
   return (
-      <div className="mt-4 flex gap-2">
-        {bouton("fr", t("francais"))}
-        {bouton("en", t("anglais"))}
+      <div className="mt-4 grid grid-cols-2 gap-2 min-[420px]:grid-cols-3">
+        {LANGUES.map(({ code, nom }) => (
+            <button
+                key={code}
+                type="button"
+                lang={code}
+                onClick={() => setLang(code)}
+                aria-pressed={lang === code}
+                className={`h-11 rounded-full text-[14px] transition-colors ${
+                    lang === code
+                        ? "bg-[#222222] font-medium text-white"
+                        : "bg-[#F7F7F7] text-[#222222] hover:bg-[#EBEBEB]"
+                }`}
+            >
+              {nom}
+            </button>
+        ))}
       </div>
   );
 }

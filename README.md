@@ -9,6 +9,18 @@
   Application web de gestion de cantine scolaire, du primaire au lycée.
 </p>
 
+<p align="center">
+  <img src="docs/captures/landing-desktop.png" alt="Page d'accueil de Cantine Vatel sur ordinateur" width="72%">
+  &nbsp;
+  <img src="docs/captures/landing-mobile.png" alt="Page d'accueil de Cantine Vatel sur téléphone" width="20%">
+</p>
+
+<p align="center">
+  <img src="docs/captures/landing-presentation.png" alt="Présentation : avant et avec Cantine Vatel" width="32%">
+  <img src="docs/captures/landing-fonctionnalites.png" alt="Fonctionnalités : un espace par profil" width="32%">
+  <img src="docs/captures/landing-ecoles.png" alt="Pour les écoles : gaspillage, allergies, service, paiement" width="32%">
+</p>
+
 ---
 
 ## Sommaire
