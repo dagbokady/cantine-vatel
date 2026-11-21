@@ -49,6 +49,11 @@ class Settings(BaseSettings):
         if not self.production:
             return
         erreurs = []
+        if not self.database_url.strip() or "@localhost" in self.database_url or "@127.0.0.1" in self.database_url:
+            erreurs.append(
+                "DATABASE_URL n'est pas définie : sur Render, colle l'Internal Database URL de ta base "
+                "dans Environment > DATABASE_URL."
+            )
         if len(self.jwt_secret) < 32 or self.jwt_secret == "change-me":
             erreurs.append("JWT_SECRET doit être une valeur aléatoire d'au moins 32 caractères.")
         if not self.ticket_signing_key.strip():

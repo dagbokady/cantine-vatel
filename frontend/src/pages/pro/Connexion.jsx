@@ -73,7 +73,7 @@ export default function Connexion() {
         <section className="relative hidden min-h-dvh overflow-hidden bg-[#FFF0ED] p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
 
           <div className="relative z-10 flex items-center gap-3">
-            <img src={APP_LOGO} alt="" className="h-11 w-11" />
+            <Link to="/decouvrir" aria-label="Découvrir Cantine Vatel" className="block w-fit rounded-full transition-transform duration-300 hover:scale-105"><img src={APP_LOGO} alt="" className="h-11 w-11" /></Link>
             <span className="text-xl font-semibold text-[#222222]">
             {APP_NAME}
           </span>
@@ -129,7 +129,7 @@ export default function Connexion() {
 
             {/* LOGO MOBILE */}
             <div className="mb-12 lg:hidden">
-              <img src={APP_LOGO} alt="" className="mx-auto h-16 w-16" />
+              <Link to="/decouvrir" aria-label="Découvrir Cantine Vatel" className="mx-auto block w-fit rounded-full transition-transform duration-300 hover:scale-105"><img src={APP_LOGO} alt="" className="h-16 w-16" /></Link>
 
               <h1
                   className="mt-4 text-center text-3xl font-semibold text-[#222222]"

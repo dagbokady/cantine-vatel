@@ -35,7 +35,12 @@ def test_limite_par_ip_sur_plusieurs_comptes(client):
 def test_production_exige_des_secrets():
     with pytest.raises(RuntimeError):
         Settings(production=True, jwt_secret="change-me", ticket_signing_key="").verifier_production()
-    Settings(production=True, jwt_secret="x" * 44, ticket_signing_key="y" * 44).verifier_production()
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        Settings(production=True, jwt_secret="x" * 44, ticket_signing_key="y" * 44).verifier_production()
+    Settings(
+        production=True, jwt_secret="x" * 44, ticket_signing_key="y" * 44,
+        database_url="postgresql://u:p@dpg-abc-a/base",
+    ).verifier_production()
 
 
 def test_url_base_render_convertie():

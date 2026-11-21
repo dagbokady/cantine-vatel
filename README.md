@@ -386,6 +386,19 @@ cd backend && .venv/bin/python -m app.seed_tests --recharger
 
 Ce script publie des menus variés (deux plats principaux, une version sans allergène et un accompagnement) pour aujourd'hui et les sept jours suivants, crée les vagues de passage (jusqu'à 22 h le jour même pour pouvoir commander à toute heure) et remet à 10 000 F le solde des élèves qui ont moins de 5 000 F. Il peut être relancé sans risque : il ne crée aucun doublon et complète les stocks entamés.
 
+### Installer l'application sur un appareil (PWA)
+
+Cantine Vatel est une application web installable : pas de store, l'application s'installe depuis le navigateur et s'ouvre ensuite en plein écran. La page **Découvrir** (`/decouvrir`) s'affiche en premier dans le navigateur et détaille ces étapes avec des illustrations ; une fois l'application installée, elle s'ouvre directement sur l'espace de l'utilisateur.
+
+| Appareil | Navigateur | Étapes |
+|---|---|---|
+| iPhone, iPad | Safari | Bouton **Partager**, puis **Sur l'écran d'accueil**, puis **Ajouter** |
+| Android | Chrome | Menu **⋮** en haut à droite, puis **Installer l'application** (ou **Ajouter à l'écran d'accueil**) |
+| Windows, Linux, Chromebook | Chrome ou Edge | Icône d'installation à droite de la barre d'adresse, puis **Installer** |
+| Mac | Safari 17 ou plus | **Partager** (ou menu **Fichier**), puis **Ajouter au Dock** |
+
+Sur Android et ordinateur, le bouton **Installer l'application** de la page Découvrir déclenche directement l'installation quand le navigateur le permet. L'installation demande un site servi en HTTPS (ou `localhost`).
+
 ## 11. Comptes de démonstration
 
 Mot de passe commun du personnel et des parents : **`motdepasse`**. Connexion sur `/pro`.

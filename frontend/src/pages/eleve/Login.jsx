@@ -157,7 +157,7 @@ export default function Login({ borne = false }) {
         <section className="relative hidden min-h-dvh overflow-hidden bg-[#FFF0ED] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
 
           <div className="relative z-10 flex items-center gap-3">
-            <img src={APP_LOGO} alt="" className="h-11 w-11" />
+            {borne ? <img src={APP_LOGO} alt="" className="h-11 w-11" /> : <Link to="/decouvrir" aria-label="Découvrir Cantine Vatel" className="block w-fit rounded-full transition-transform duration-300 hover:scale-105"><img src={APP_LOGO} alt="" className="h-11 w-11" /></Link>}
             <span className="text-xl font-semibold tracking-tight text-[#222222]">
             {APP_NAME}
           </span>
@@ -212,7 +212,7 @@ export default function Login({ borne = false }) {
           <div className="w-full max-w-[420px]">
 
             <div className="mb-12 lg:hidden">
-              <img src={APP_LOGO} alt="" className="mx-auto h-16 w-16" />
+              {borne ? <img src={APP_LOGO} alt="" className="mx-auto h-16 w-16" /> : <Link to="/decouvrir" aria-label="Découvrir Cantine Vatel" className="mx-auto block w-fit rounded-full transition-transform duration-300 hover:scale-105"><img src={APP_LOGO} alt="" className="h-16 w-16" /></Link>}
               <h1
                   className="mt-4 text-center text-3xl font-semibold text-[#222222]"
                   style={titreStyle}

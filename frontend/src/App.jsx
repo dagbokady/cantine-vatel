@@ -39,6 +39,19 @@ import Statistiques from "./pages/admin/Statistiques";
 import Eleves from "./pages/admin/Eleves";
 import StatistiquesCuisine from "./pages/cuisine/Statistiques";
 import Appel from "./pages/enseignant/Appel";
+import { estInstallee } from "./pwa/etat";
+import { estBorne } from "./utils/jour";
+import { decouverteVue } from "./config/app";
+
+// La page Découvrir s'affiche en premier à chaque visite dans le navigateur, jamais dans la PWA installée ni sur la borne.
+function Entree() {
+  if (!estInstallee() && !estBorne() && !decouverteVue()) return <Navigate to="/decouvrir" replace />;
+  return (
+    <RequireAuth>
+      <Accueil />
+    </RequireAuth>
+  );
+}
 
 const R = (roles, el) => <RequireAuth roles={roles}>{el}</RequireAuth>;
 
@@ -62,14 +75,7 @@ export default function App() {
                     </RequireAuth>
                   }
                 />
-                <Route
-                  path="/"
-                  element={
-                    <RequireAuth>
-                      <Accueil />
-                    </RequireAuth>
-                  }
-                />
+                <Route path="/" element={<Entree />} />
                 <Route
                   path="/profil"
                   element={

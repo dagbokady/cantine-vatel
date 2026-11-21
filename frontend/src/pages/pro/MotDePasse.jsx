@@ -14,7 +14,7 @@ function Cadre({ surTitre, titre, texte, children }) {
           <Link to="/pro" className="inline-flex h-10 items-center gap-2 rounded-full pr-3 text-[14px] font-medium text-[#717171] hover:text-[#222222]">
             <ArrowLeft size={17} /> Connexion
           </Link>
-          <img src={APP_LOGO} alt="" className="mt-8 h-12 w-12" />
+          <Link to="/decouvrir" aria-label="Découvrir Cantine Vatel" className="mt-8 block w-fit rounded-full transition-transform duration-300 hover:scale-105"><img src={APP_LOGO} alt="" className="h-12 w-12" /></Link>
           <p className="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-[#FF5A5F]">{surTitre}</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#222222] sm:text-4xl" style={titreStyle}>{titre}</h1>
           <p className="mt-3 text-[15px] leading-6 text-[#717171]">{texte}</p>

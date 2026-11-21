@@ -5,11 +5,15 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 from app.config import settings
+
+settings.verifier_production()  # avant de créer le moteur : message clair si la config manque
+
 from app.db import Base
 from app import models  # noqa: F401 (import tous les modèles)
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# %% : un mot de passe contenant « % » casserait la lecture de alembic.ini.
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

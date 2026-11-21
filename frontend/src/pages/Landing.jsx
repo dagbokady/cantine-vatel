@@ -6,18 +6,26 @@ import {
   BarChart3,
   ChefHat,
   Check,
+  CircleCheck,
   Clock3,
+  Compass,
+  Download,
+  EllipsisVertical,
   KeyRound,
   Leaf,
   Monitor,
+  MonitorDown,
   Plus,
+  Share,
   ShieldCheck,
   Smartphone,
+  SquarePlus,
   Users,
   Wallet,
 } from "lucide-react";
-import { APP_LOGO, APP_NAME } from "../config/app";
+import { APP_LOGO, APP_NAME, marquerDecouverte } from "../config/app";
 import BoutonInstaller from "../pwa/BoutonInstaller";
+import { estInstallee } from "../pwa/etat";
 import { Siege } from "../components/eleve/PlanSalle";
 
 const titre = { fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.03em" };
@@ -29,6 +37,7 @@ const LIENS = [
   { href: "#presentation", label: "Présentation" },
   { href: "#fonctionnalites", label: "Fonctionnalités" },
   { href: "#ecoles", label: "Pour les écoles" },
+  { href: "#installer", label: "Installer" },
 ];
 
 // Apparition unique à l'entrée dans l'écran (IntersectionObserver, jamais d'écouteur de scroll).
@@ -113,8 +122,8 @@ function Navigation() {
 function VisuelHero() {
   return (
     <div className="relative mx-auto w-full max-w-[520px] pb-16 lg:pb-0">
-      <div className="overflow-hidden rounded-[22px] bg-[#F7F7F7]">
-        <img src={PHOTO_ATTIEKE} alt="Assiette d'attiéké et poisson braisé" className="aspect-[4/5] w-full object-cover" fetchPriority="high" />
+      <div className="group overflow-hidden rounded-[22px] bg-[#F7F7F7]">
+        <img src={PHOTO_ATTIEKE} alt="Assiette d'attiéké et poisson braisé" className={`aspect-[4/5] w-full object-cover transition-transform duration-1000 ${COURBE} group-hover:scale-105`} fetchPriority="high" />
       </div>
 
       <div className="flotte absolute -left-2 bottom-0 w-[60%] max-w-[260px] rounded-[22px] border border-[#EBEBEB] bg-white p-4 shadow-[0_24px_60px_rgba(34,34,34,0.14)] sm:-left-8 lg:bottom-12">
@@ -211,7 +220,7 @@ const FAQ = [
   ["Et si le QR code ne s'affiche pas ?", "Chaque réservation reçoit aussi un code de 6 caractères. L'agent le saisit au comptoir et retrouve la commande."],
   ["Qui fixe les prix des portions ?", "Les chefs de cuisine. Un changement de prix ne modifie jamais une réservation déjà confirmée."],
   ["Comment sont gérées les allergies ?", "Les parents les déclarent. Les plats incompatibles sont masqués et un accompagnement incompatible ne peut pas être ajouté."],
-  ["Quelle installation prévoir ?", "Non. Cantine Vatel fonctionne dans le navigateur et peut être ajoutée à l'écran d'accueil comme une application."],
+  ["Quelle installation prévoir ?", "Aucune. Cantine Vatel fonctionne dans le navigateur et peut être ajoutée à l'écran d'accueil comme une application, sur téléphone, tablette ou ordinateur."],
   ["Plusieurs chefs dans une même cuisine ?", "Oui. L'administration crée les comptes et peut affecter plusieurs chefs aux mêmes niveaux."],
 ];
 
@@ -221,8 +230,280 @@ const ACCES = [
   { to: "/pro", icone: KeyRound, titre: "Personnel ou parent", texte: "Cuisine, agent, administration, parents" },
 ];
 
+// Pinceau corail : une traînée fluide suit la souris, fondue sous le contenu (multiply).
+// Souris uniquement, désactivé si l'utilisateur réduit les animations ; la boucle s'arrête au repos.
+function PinceauCorail() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas || !window.matchMedia("(pointer: fine)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    const ctx = canvas.getContext("2d");
+    const VIE = 900;
+    const points = [];
+    let l = 0, h = 0, souris = null, pointe = null, raf = 0;
+    const dim = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      l = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = l * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    const boucle = (t) => {
+      if (souris) {
+        pointe.x += (souris.x - pointe.x) * 0.28;
+        pointe.y += (souris.y - pointe.y) * 0.28;
+        const d = points[points.length - 1];
+        if (!d || Math.hypot(pointe.x - d.x, pointe.y - d.y) > 1.5) points.push({ x: pointe.x, y: pointe.y, t });
+      }
+      while (points.length && t - points[0].t > VIE) points.shift();
+      ctx.clearRect(0, 0, l, h);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      for (let i = 2; i < points.length; i++) {
+        const a = points[i - 2], b = points[i - 1], c = points[i];
+        const vie = 1 - (t - c.t) / VIE;
+        const ondule = 1 + 0.18 * Math.sin(c.t / 90 + i * 0.4);
+        ctx.beginPath();
+        ctx.moveTo((a.x + b.x) / 2, (a.y + b.y) / 2);
+        ctx.quadraticCurveTo(b.x, b.y, (b.x + c.x) / 2, (b.y + c.y) / 2);
+        ctx.strokeStyle = `rgba(255, 90, 95, ${0.55 * vie * vie})`;
+        ctx.lineWidth = (8 + 46 * vie) * ondule;
+        ctx.stroke();
+      }
+      const fin = points[points.length - 1];
+      if (fin) {
+        const g = ctx.createRadialGradient(fin.x, fin.y, 0, fin.x, fin.y, 60);
+        g.addColorStop(0, "rgba(255, 90, 95, 0.35)");
+        g.addColorStop(1, "rgba(255, 90, 95, 0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(fin.x - 60, fin.y - 60, 120, 120);
+      }
+      raf = points.length ? requestAnimationFrame(boucle) : 0;
+    };
+    const bouge = (e) => {
+      souris = { x: e.clientX, y: e.clientY };
+      if (!pointe) pointe = { ...souris };
+      if (!raf) raf = requestAnimationFrame(boucle);
+    };
+    const sort = () => { souris = null; pointe = null; };
+    dim();
+    window.addEventListener("resize", dim);
+    window.addEventListener("pointermove", bouge, { passive: true });
+    document.documentElement.addEventListener("pointerleave", sort);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", dim);
+      window.removeEventListener("pointermove", bouge);
+      document.documentElement.removeEventListener("pointerleave", sort);
+    };
+  }, []);
+  return (
+    <canvas ref={ref} aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-40 h-full w-full mix-blend-multiply [filter:blur(10px)]" />
+  );
+}
+
+// Halo pulsé posé sur le bouton à toucher dans les illustrations.
+function Repere({ x, y }) {
+  return (
+    <g>
+      <circle cx={x} cy={y} r="11" fill="#FF5A5F" className="onde" style={{ transformBox: "fill-box", transformOrigin: "center" }} />
+      <circle cx={x} cy={y} r="9" fill="#FF5A5F" />
+    </g>
+  );
+}
+
+// Illustration de l'appareil, le geste à faire est signalé en corail.
+function IllustrationAppareil({ id }) {
+  const icones = (x0, y0, pas) =>
+    [0, 1, 2, 3, 4, 5].map((i) => (
+      <rect key={i} x={x0 + (i % 3) * pas} y={y0 + Math.floor(i / 3) * pas} width={pas - 8} height={pas - 8} rx="6"
+        fill={i === 4 ? "#FF5A5F" : "#EBEBEB"} />
+    ));
+  if (id === "ios" || id === "android") {
+    return (
+      <svg viewBox="0 0 200 240" className="h-full w-full" aria-hidden="true">
+        <rect x="52" y="8" width="96" height="224" rx="22" fill="#FFFFFF" stroke="#222222" strokeWidth="3" />
+        <rect x="60" y="20" width="80" height="200" rx="14" fill="#F7F7F7" />
+        <rect x="66" y="30" width={id === "ios" ? 68 : 56} height="12" rx="6" fill="#FFFFFF" stroke="#EBEBEB" />
+        <rect x="72" y="58" width="56" height="8" rx="4" fill="#222222" />
+        <rect x="72" y="72" width="40" height="6" rx="3" fill="#B0B0B0" />
+        {icones(72, 92, 20)}
+        <rect x="72" y="140" width="56" height="34" rx="10" fill="#FFF0ED" />
+        {id === "ios" ? (
+          <>
+            <rect x="60" y="192" width="80" height="28" fill="#FFFFFF" />
+            <circle cx="76" cy="206" r="2.5" fill="#B0B0B0" />
+            <circle cx="124" cy="206" r="2.5" fill="#B0B0B0" />
+            <Repere x={100} y={206} />
+            <path d="M100 201v9M96.5 204.5 100 201l3.5 3.5M95 207v4h10v-4" stroke="#FFFFFF" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </>
+        ) : (
+          <>
+            <Repere x={132} y={36} />
+            {[32, 36, 40].map((y) => <circle key={y} cx="132" cy={y} r="1.4" fill="#FFFFFF" />)}
+          </>
+        )}
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 220 170" className="h-full w-full" aria-hidden="true">
+      <rect x="22" y="14" width="176" height="118" rx="10" fill="#FFFFFF" stroke="#222222" strokeWidth="3" />
+      <rect x="30" y="22" width="160" height="102" rx="4" fill="#F7F7F7" />
+      <path d="M8 140h204l-10 14H18z" fill="#222222" />
+      <rect x="36" y="28" width="148" height="12" rx="6" fill="#FFFFFF" stroke="#EBEBEB" />
+      <rect x="44" y="52" width="70" height="8" rx="4" fill="#222222" />
+      <rect x="44" y="66" width="48" height="6" rx="3" fill="#B0B0B0" />
+      <rect x="124" y="50" width="56" height="44" rx="8" fill="#FFF0ED" />
+      {id === "mac" ? (
+        <>
+          <rect x="66" y="104" width="88" height="16" rx="6" fill="#FFFFFF" stroke="#EBEBEB" />
+          {[76, 92, 108, 124].map((x) => <rect key={x} x={x - 5} y="107" width="10" height="10" rx="3" fill="#EBEBEB" />)}
+          <Repere x={142} y={112} />
+          <path d="M142 108v8M138 112h8" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <Repere x={174} y={34} />
+          <path d="M170 31h8v5h-8zM174 38v3M171 41h6" stroke="#FFFFFF" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+const PLATEFORMES = [
+  {
+    id: "ios", nom: "iPhone et iPad", navigateur: "Safari", icone: Smartphone,
+    etapes: [
+      [Compass, "Ouvrez Cantine Vatel dans Safari."],
+      [Share, "Touchez le bouton Partager, en bas de l'écran (en haut sur iPad)."],
+      [SquarePlus, "Choisissez « Sur l'écran d'accueil »."],
+      [CircleCheck, "Touchez Ajouter : l'icône rejoint vos applications."],
+    ],
+  },
+  {
+    id: "android", nom: "Android", navigateur: "Chrome", icone: Smartphone,
+    etapes: [
+      [Compass, "Ouvrez Cantine Vatel dans Chrome."],
+      [EllipsisVertical, "Touchez le menu, en haut à droite."],
+      [Download, "Choisissez « Installer l'application » ou « Ajouter à l'écran d'accueil »."],
+      [CircleCheck, "Confirmez : l'application s'ouvre en plein écran."],
+    ],
+  },
+  {
+    id: "ordinateur", nom: "Windows et Chromebook", navigateur: "Chrome ou Edge", icone: Monitor,
+    etapes: [
+      [Compass, "Ouvrez Cantine Vatel dans Chrome ou Edge."],
+      [MonitorDown, "Cliquez sur l'icône d'installation, à droite de la barre d'adresse."],
+      [CircleCheck, "Validez Installer : l'application s'ouvre dans sa propre fenêtre."],
+    ],
+  },
+  {
+    id: "mac", nom: "Mac", navigateur: "Safari 17 ou plus récent", icone: Monitor,
+    etapes: [
+      [Compass, "Ouvrez Cantine Vatel dans Safari."],
+      [Share, "Cliquez sur Partager dans la barre d'outils, ou ouvrez le menu Fichier."],
+      [SquarePlus, "Choisissez « Ajouter au Dock »."],
+      [CircleCheck, "L'application se lance depuis le Dock ou le Launchpad."],
+    ],
+  },
+];
+
+function detecterAppareil() {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "ios";
+  if (/Android/.test(ua)) return "android";
+  if (/Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua)) return "mac";
+  return "ordinateur";
+}
+
+function Installation() {
+  const [detecte] = useState(detecterAppareil);
+  const [actif, setActif] = useState(detecte);
+  const installee = estInstallee();
+  const p = PLATEFORMES.find((x) => x.id === actif);
+  const choisir = (e, i) => {
+    const suivant = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (!suivant) return;
+    const n = PLATEFORMES[(i + suivant + PLATEFORMES.length) % PLATEFORMES.length];
+    setActif(n.id);
+    document.getElementById(`onglet-${n.id}`)?.focus();
+  };
+  return (
+    <section id="installer" aria-labelledby="titre-installer" className="scroll-mt-24 px-4 pb-24 sm:px-8">
+      <div className="mx-auto grid max-w-[1120px] grid-cols-1 gap-10 lg:grid-cols-[0.9fr_1.4fr] lg:gap-16">
+        <div className="revele lg:sticky lg:top-32 lg:self-start">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#FF5A5F]">Installer l'application</p>
+          <h2 id="titre-installer" className="mt-4 text-4xl font-semibold sm:text-5xl" style={{ ...titre, textWrap: "balance" }}>
+            Sur l'écran d'accueil, en trois gestes.
+          </h2>
+          <p className="mt-6 max-w-[440px] text-lg text-[#717171]" style={{ textWrap: "pretty" }}>
+            Pas de store, pas de téléchargement lourd. Cantine Vatel s'installe depuis le navigateur et s'ouvre ensuite comme une application.
+          </p>
+          {installee ? (
+            <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#FFF0ED] px-4 py-2 text-sm font-semibold text-[#222222]">
+              <CircleCheck size={16} className="text-[#FF5A5F]" aria-hidden="true" /> Déjà installée sur cet appareil
+            </p>
+          ) : (
+            <div className="mt-6"><BoutonInstaller variante="plein">Installer en un clic</BoutonInstaller></div>
+          )}
+        </div>
+
+        <div className="revele">
+          <div role="tablist" aria-label="Choisir son appareil" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+            {PLATEFORMES.map((x, i) => {
+              const sel = x.id === actif;
+              return (
+                <button key={x.id} id={`onglet-${x.id}`} type="button" role="tab" aria-selected={sel} aria-controls="panneau-installer"
+                  tabIndex={sel ? 0 : -1} onClick={() => setActif(x.id)} onKeyDown={(e) => choisir(e, i)}
+                  className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition duration-300 ${COURBE} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A5F] ${sel ? "border-[#222222] bg-[#222222] text-white" : "border-[#EBEBEB] bg-white text-[#717171] hover:border-[#222222] hover:text-[#222222]"}`}>
+                  <x.icone size={16} aria-hidden="true" />
+                  {x.nom}
+                  {x.id === detecte && <span className="h-1.5 w-1.5 rounded-full bg-[#FF5A5F]" aria-label="votre appareil" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div id="panneau-installer" role="tabpanel" aria-labelledby={`onglet-${actif}`} key={actif}
+            className="monte mt-4 grid grid-cols-1 overflow-hidden rounded-[22px] border border-[#EBEBEB] sm:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)]">
+            <div className="group relative flex items-center justify-center bg-[#FFF0ED] p-6 sm:p-8">
+              <div className={`h-44 w-44 sm:h-52 sm:w-52 transition-transform duration-700 ${COURBE} group-hover:-rotate-3 group-hover:scale-105`}>
+                <IllustrationAppareil id={actif} />
+              </div>
+              {actif === detecte && (
+                <span className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#222222]">Votre appareil</span>
+              )}
+            </div>
+            <div className="p-6 sm:p-8">
+              <p className="text-sm text-[#717171]">Avec {p.navigateur}</p>
+              <ol className="mt-4 space-y-2">
+                {p.etapes.map(([Icone, texte], i) => (
+                  <li key={texte} className={`group flex items-start gap-4 rounded-2xl p-2 transition-colors duration-300 hover:bg-[#F7F7F7]`}>
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#EBEBEB] bg-white text-[#222222] transition duration-500 ${COURBE} group-hover:border-[#FF5A5F] group-hover:bg-[#FF5A5F] group-hover:text-white`}>
+                      <Icone size={18} aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 pt-2 text-base text-[#222222]" style={{ textWrap: "pretty" }}>
+                      <span className="mr-2 text-sm font-semibold text-[#B0B0B0]">{String(i + 1).padStart(2, "0")}</span>
+                      {texte}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Landing() {
   useRevele();
+  useEffect(() => marquerDecouverte(), []);
   useEffect(() => {
     const avant = document.title;
     document.title = "Cantine Vatel · La cantine scolaire, pensée autrement";
@@ -234,6 +515,7 @@ export default function Landing() {
       <a href="#contenu" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-[#222222] focus:px-4 focus:py-2 focus:text-white">
         Aller au contenu
       </a>
+      <PinceauCorail />
       <Navigation />
 
       <main id="contenu">
@@ -282,7 +564,7 @@ export default function Landing() {
                 ["Avant", "Des files au comptoir, des quantités estimées, des listes d'allergies sur papier, de l'argent liquide à gérer."],
                 ["Avec Cantine Vatel", "Des commandes connues à l'avance, des portions au tiers près, des contrôles automatiques et un crédit rechargé en ligne."],
               ].map(([t, x], i) => (
-                <article key={t} className={`rounded-[22px] p-6 ${i ? "bg-[#222222] text-white" : "bg-white"}`}>
+                <article key={t} className={`rounded-[22px] p-6 transition duration-500 ${COURBE} hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(34,34,34,0.12)] ${i ? "bg-[#222222] text-white" : "bg-white"}`}>
                   <p className={`text-sm font-semibold ${i ? "text-[#FF5A5F]" : "text-[#717171]"}`}>{t}</p>
                   <p className={`mt-3 text-lg ${i ? "text-white" : "text-[#222222]"}`} style={{ textWrap: "pretty" }}>{x}</p>
                 </article>
@@ -305,15 +587,17 @@ export default function Landing() {
             <ul className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
               {ESPACES.map(({ icone: Icone, nom, texte, grand }, i) => (
                 <li key={nom} style={{ transitionDelay: `${(i % 3) * 80}ms` }}
-                  className={`revele group rounded-[22px] border border-[#EBEBEB] p-6 transition-colors duration-300 hover:border-[#222222] ${grand ? "md:col-span-2 md:row-span-2 md:p-8" : ""}`}>
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FFF0ED] text-[#FF5A5F]">
+                  className={`revele group rounded-[22px] border border-[#EBEBEB] bg-white p-6 transition-[border-color,box-shadow,translate] duration-500 ${COURBE} hover:-translate-y-1 hover:border-[#222222] hover:shadow-[0_20px_50px_rgba(34,34,34,0.08)] ${grand ? "md:col-span-2 md:row-span-2 md:p-8" : ""}`}>
+                  <span className={`flex h-12 w-12 items-center justify-center rounded-full bg-[#FFF0ED] text-[#FF5A5F] transition duration-500 ${COURBE} group-hover:-rotate-12 group-hover:scale-110 group-hover:bg-[#FF5A5F] group-hover:text-white`}>
                     <Icone size={22} aria-hidden="true" />
                   </span>
                   <h3 className={`mt-6 font-semibold ${grand ? "text-3xl" : "text-xl"}`} style={titre}>{nom}</h3>
                   <p className="mt-2 text-base text-[#717171]" style={{ textWrap: "pretty" }}>{texte}</p>
                   {grand && (
                     <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <img src={PHOTO_RIZ} alt="Riz sauce arachide" loading="lazy" className="aspect-[4/3] w-full rounded-[22px] object-cover" />
+                      <div className="overflow-hidden rounded-[22px]">
+                        <img src={PHOTO_RIZ} alt="Riz sauce arachide" loading="lazy" className={`aspect-[4/3] w-full object-cover transition-transform duration-700 ${COURBE} group-hover:scale-105`} />
+                      </div>
                       <div className="rounded-[22px] bg-[#F7F7F7] p-4">
                         <p className="text-sm font-semibold">Personnalise ton plat</p>
                         {[["Piment", true, "Sans supplément"], ["Alloco", true, "+250 F"], ["Oignons frits", false, "+100 F"]].map(([n, on, s]) => (
@@ -350,8 +634,8 @@ export default function Landing() {
             </div>
             <ol className="grid grid-cols-1 gap-4">
               {PARCOURS.map((p) => (
-                <li key={p.n} className="revele rounded-[22px] bg-white/5 p-6 sm:p-8">
-                  <p className="text-sm font-semibold text-[#FF5A5F]">{p.n}</p>
+                <li key={p.n} className={`revele group rounded-[22px] bg-white/5 p-6 transition-colors duration-500 ${COURBE} hover:bg-white/10 sm:p-8`}>
+                  <p className={`text-sm font-semibold text-[#FF5A5F] transition-transform duration-500 ${COURBE} group-hover:translate-x-2`}>{p.n}</p>
                   <h3 className="mt-2 text-2xl font-semibold" style={titre}>{p.titre}</h3>
                   <p className="mt-2 text-base text-white/70" style={{ textWrap: "pretty" }}>{p.texte}</p>
                 </li>
@@ -373,8 +657,8 @@ export default function Landing() {
             </div>
             <ul className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {AVANTAGES.map(({ icone: Icone, titre: t, texte }, i) => (
-                <li key={t} className={`revele rounded-[22px] p-6 ${i === 1 ? "bg-[#FFF0ED]" : "bg-[#F7F7F7]"}`} style={{ transitionDelay: `${i * 80}ms` }}>
-                  <Icone size={22} className="text-[#FF5A5F]" aria-hidden="true" />
+                <li key={t} className={`revele group rounded-[22px] p-6 transition-[background-color,translate] duration-500 ${COURBE} hover:-translate-y-1 ${i === 1 ? "bg-[#FFF0ED]" : "bg-[#F7F7F7] hover:bg-[#FFF0ED]"}`} style={{ transitionDelay: `${i * 80}ms` }}>
+                  <Icone size={22} className={`text-[#FF5A5F] transition-transform duration-500 ${COURBE} group-hover:-translate-y-1 group-hover:scale-125`} aria-hidden="true" />
                   <h3 className="mt-6 text-xl font-semibold" style={titre}>{t}</h3>
                   <p className="mt-2 text-sm text-[#717171]" style={{ textWrap: "pretty" }}>{texte}</p>
                 </li>
@@ -382,6 +666,8 @@ export default function Landing() {
             </ul>
           </div>
         </section>
+
+        <Installation />
 
         {/* FAQ */}
         <section aria-labelledby="titre-faq" className="px-4 pb-24 sm:px-8">
