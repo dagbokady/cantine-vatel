@@ -1,8 +1,9 @@
 from datetime import date as _date
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import desc, select
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import desc, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..deps import get_current_eleve, get_db
@@ -17,16 +18,25 @@ from ..models import (
     Transaction,
 )
 from ..schemas.eleve import (
+    CreneauDispo,
     CreneauLite,
+    CreneauxJourResponse,
     HistoriqueResponse,
     HistoriqueReservation,
     HistoriqueTransaction,
     MeResponse,
     MenuDuJourResponse,
     PlaceLite,
+    PlaceSalle,
+    ReservationCreate,
+    ReservationCreated,
     ReservationDuJourResponse,
+    SalleResponse,
+    TableSalleLite,
 )
 from ..services.eleve import commandes_ouvertes, options_menu_du_jour
+from ..services.reservations import creer_reservation
+from ..services.tickets import sign_ticket
 
 router = APIRouter(prefix="/eleve", tags=["eleve"])
 
@@ -58,6 +68,150 @@ def menu_du_jour(
         cloture_commandes=params.cloture_commandes,
         compatibles=compatibles,
         incompatibles=incompatibles,
+    )
+
+
+@router.get("/creneaux", response_model=CreneauxJourResponse)
+def creneaux(
+    date: _date | None = Query(default=None),
+    eleve: Eleve = Depends(get_current_eleve),
+    db: Session = Depends(get_db),
+):
+    jour = date or _date.today()
+    rows = db.execute(
+        select(Creneau).where(Creneau.date == jour).order_by(Creneau.heure_debut)
+    ).scalars().all()
+
+    if not rows:
+        return CreneauxJourResponse(date=jour, creneaux=[])
+
+    occ_rows = db.execute(
+        select(Reservation.creneau_id, func.count(Reservation.id))
+        .where(
+            Reservation.creneau_id.in_([c.id for c in rows]),
+            Reservation.statut != "annulee",
+        )
+        .group_by(Reservation.creneau_id)
+    ).all()
+    occupe = {cid: n for cid, n in occ_rows}
+
+    items = [
+        CreneauDispo(
+            id=c.id,
+            heure_debut=c.heure_debut,
+            heure_fin=c.heure_fin,
+            capacite=c.capacite,
+            places_restantes=max(c.capacite - occupe.get(c.id, 0), 0),
+        )
+        for c in rows
+    ]
+    return CreneauxJourResponse(date=jour, creneaux=items)
+
+
+@router.get("/salle", response_model=SalleResponse)
+def salle(
+    creneau_id: int = Query(..., ge=1),
+    eleve: Eleve = Depends(get_current_eleve),
+    db: Session = Depends(get_db),
+):
+    creneau = db.get(Creneau, creneau_id)
+    if creneau is None:
+        return SalleResponse(creneau_id=creneau_id, largeur=0, hauteur=0, tables=[])
+
+    tables = db.execute(select(TableSalle).order_by(TableSalle.nom)).scalars().all()
+    places = db.execute(
+        select(Place).order_by(Place.table_id, Place.numero)
+    ).scalars().all()
+    prises = db.execute(
+        select(Reservation.place_id).where(
+            Reservation.creneau_id == creneau.id,
+            Reservation.statut != "annulee",
+        )
+    ).all()
+    prises_set = {pid for (pid,) in prises}
+
+    by_table: dict[int, list[Place]] = {}
+    for p in places:
+        by_table.setdefault(p.table_id, []).append(p)
+
+    largeur = max((t.x for t in tables), default=0.0) + 160.0
+    hauteur = max((t.y for t in tables), default=0.0) + 160.0
+
+    return SalleResponse(
+        creneau_id=creneau.id,
+        largeur=largeur,
+        hauteur=hauteur,
+        tables=[
+            TableSalleLite(
+                id=t.id,
+                nom=t.nom,
+                x=t.x,
+                y=t.y,
+                nb_places=t.nb_places,
+                places=[
+                    PlaceSalle(
+                        id=p.id,
+                        numero=p.numero,
+                        angle=p.angle,
+                        etat="prise" if p.id in prises_set else "libre",
+                    )
+                    for p in by_table.get(t.id, [])
+                ],
+            )
+            for t in tables
+        ],
+    )
+
+
+@router.post("/reservations", response_model=ReservationCreated, status_code=201)
+def post_reservation(
+    body: ReservationCreate,
+    eleve: Eleve = Depends(get_current_eleve),
+    db: Session = Depends(get_db),
+):
+    try:
+        reservation = creer_reservation(
+            db,
+            eleve,
+            menu_jour_id=body.menu_jour_id,
+            creneau_id=body.creneau_id,
+            place_id=body.place_id,
+            tiers=body.tiers,
+            now=datetime.now(),
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        # Unicité d'une place sur un créneau peut sauter juste avant le commit.
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=409, detail="Cette place vient d'être prise, choisis-en une autre."
+        )
+
+    db.refresh(reservation)
+    ticket = sign_ticket(
+        {
+            "reservation_id": reservation.id,
+            "eleve_id": eleve.id,
+            "matricule": eleve.matricule,
+            "menu_jour_id": reservation.menu_jour_id,
+            "creneau_id": reservation.creneau_id,
+            "place_id": reservation.place_id,
+            "tiers": reservation.tiers,
+            "prix": reservation.prix,
+            "iat": int(reservation.created_at.timestamp()),
+        }
+    )
+    return ReservationCreated(
+        id=reservation.id,
+        menu_jour_id=reservation.menu_jour_id,
+        creneau_id=reservation.creneau_id,
+        place_id=reservation.place_id,
+        tiers=reservation.tiers,
+        prix=reservation.prix,
+        statut=reservation.statut,
+        ticket=ticket,
     )
 
 

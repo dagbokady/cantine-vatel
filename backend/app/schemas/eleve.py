@@ -40,10 +40,69 @@ class CreneauLite(BaseModel):
     heure_fin: time
 
 
+class CreneauDispo(BaseModel):
+    id: int
+    heure_debut: time
+    heure_fin: time
+    capacite: int
+    places_restantes: int
+
+
+class CreneauxJourResponse(BaseModel):
+    date: date
+    creneaux: list[CreneauDispo]
+
+
 class PlaceLite(BaseModel):
     id: int
     table_nom: str
     numero: int
+
+
+class PlaceSalle(BaseModel):
+    id: int
+    numero: int
+    angle: float
+    etat: str  # "libre" | "prise"
+
+
+class TableSalleLite(BaseModel):
+    id: int
+    nom: str
+    x: float
+    y: float
+    nb_places: int
+    places: list[PlaceSalle]
+
+
+class SalleResponse(BaseModel):
+    creneau_id: int
+    largeur: float
+    hauteur: float
+    tables: list[TableSalleLite]
+
+
+class ReservationCreate(BaseModel):
+    menu_jour_id: int
+    creneau_id: int
+    place_id: int
+    tiers: int
+
+
+class ReservationCreated(BaseModel):
+    id: int
+    menu_jour_id: int
+    creneau_id: int
+    place_id: int
+    tiers: int
+    prix: int
+    statut: str
+    ticket: str
+
+
+class PublicKeyResponse(BaseModel):
+    algorithm: str
+    public_key_pem: str
 
 
 class ReservationDuJourResponse(BaseModel):

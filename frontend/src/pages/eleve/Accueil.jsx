@@ -1,23 +1,62 @@
-import { useAuth } from "../../hooks/useAuth";
+import { useEffect, useState } from "react";
+import { getMe, getMenuDuJour, getReservationDuJour } from "../../api/eleve";
+import EcranRepasDuJour from "../../components/eleve/EcranRepasDuJour";
+import EcranPatientez from "../../components/eleve/EcranPatientez";
+import EcranReservationEnCours from "../../components/eleve/EcranReservationEnCours";
 
 export default function Accueil() {
-  const { user, logout } = useAuth();
+  const [data, setData] = useState({ me: null, menu: null, reservation: null });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <div className="min-h-screen bg-white px-5 pt-12">
-      <h1
-        className="text-2xl font-bold tracking-tight text-[#212121]"
-        style={{ fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.02em" }}
-      >
-        Bonjour, {user?.nom?.split(" ")[0]} 👋
-      </h1>
-      <p className="mt-2 text-[#616161]">Bienvenue à la Cantine Vatel</p>
-      <button
-        onClick={logout}
-        className="mt-8 w-full rounded-[32px] bg-[#17171c] px-6 py-3 text-sm font-medium text-white"
-      >
-        Se déconnecter
-      </button>
-    </div>
-  );
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [me, menu, reservation] = await Promise.all([
+          getMe(),
+          getMenuDuJour(),
+          getReservationDuJour(),
+        ]);
+        if (alive) setData({ me, menu, reservation });
+      } catch (err) {
+        if (alive) setError(err.response?.data?.detail || "Impossible de charger.");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white text-sm text-[#93939f]">
+        Chargement…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-sm text-[#b30000]">
+        {error}
+      </div>
+    );
+  }
+
+  const { me, menu, reservation } = data;
+
+  if (reservation) {
+    return <EcranReservationEnCours me={me} reservation={reservation} />;
+  }
+
+  const menuVide = menu.compatibles.length === 0 && menu.incompatibles.length === 0;
+  if (menuVide) {
+    return <EcranPatientez me={me} menu={menu} raison="vide" />;
+  }
+  if (!menu.commandes_ouvertes) {
+    return <EcranPatientez me={me} menu={menu} raison="fermees" />;
+  }
+  return <EcranRepasDuJour me={me} menu={menu} />;
 }

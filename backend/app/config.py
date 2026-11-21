@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://cantine:cantine@localhost:5432/cantine"
     jwt_secret: str = "change-me"
     cors_origins: str = "http://localhost:5173"
+    ticket_signing_key: str = ""  # Ed25519 PEM privée (PKCS8 non chiffré)
 
     @property
     def cors_origins_list(self) -> list[str]:
