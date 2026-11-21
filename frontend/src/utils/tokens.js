@@ -1,19 +1,27 @@
-// Design tokens — docs/DESIGN.md (voir CLAUDE.md).
+
+// Design tokens — Cantine Vatel
+// Direction artistique : premium, éditoriale et minimaliste.
 
 export const colors = {
-  canvas: "#ffffff",
-  surface: "#eeece7",
-  surfaceSelected: "#f7f7f5",
-  deep: "#003c33",
-  ink: "#212121",
-  muted: "#616161",
-  mutedSoft: "#93939f",
-  hairline: "#d9d9dd",
-  hairlineSoft: "#f2f2f2",
-  primary: "#17171c",
-  coral: "#ff7759",
-  error: "#b30000",
-  errorBg: "#fff1f1",
+  canvas: "#FFFFFF",
+  surface: "#F7F7F7",
+  surfaceSelected: "#FFF0ED",
+
+  // Conservé pour compatibilité avec les composants existants.
+  deep: "#222222",
+
+  ink: "#222222",
+  muted: "#717171",
+  mutedSoft: "#B0B0B0",
+
+  hairline: "#EBEBEB",
+  hairlineSoft: "#F7F7F7",
+
+  primary: "#222222",
+  coral: "#FF5A5F",
+
+  error: "#B30000",
+  errorBg: "#FFF1F1",
 };
 
 export const titreStyle = {
