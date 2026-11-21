@@ -21,8 +21,8 @@ const mmss = (sec) =>
 function Ligne({ label, valeur }) {
   return (
     <div className="flex items-center justify-between py-2.5">
-      <span className="text-[14px] text-[#616161]">{label}</span>
-      <span className="text-[15px] font-medium text-[#212121]">{valeur}</span>
+      <span className="text-[14px] text-[#717171]">{label}</span>
+      <span className="text-[15px] font-medium text-[#222222]">{valeur}</span>
     </div>
   );
 }
@@ -63,8 +63,8 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
   return (
     <div className="min-h-screen bg-white px-5 pb-[calc(32px+env(safe-area-inset-bottom))]">
       <header className="flex items-center justify-between pt-3">
-        <p className="text-[16px] text-[#616161]">
-          Crédit : <span className="font-medium text-[#212121]">{fcfa(me.solde)}</span>
+        <p className="text-[16px] text-[#717171]">
+          Crédit : <span className="font-medium text-[#222222]">{fcfa(me.solde)}</span>
         </p>
         <button
           type="button"
@@ -76,33 +76,33 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
         </button>
       </header>
 
-      <h1 className="mt-4 text-[28px] font-medium text-[#212121]" style={titreStyle}>
+      <h1 className="mt-4 text-[28px] font-medium text-[#222222]" style={titreStyle}>
         Ma réservation
       </h1>
 
       {!servie && (
         <section className="mt-5 flex flex-col items-center">
           <Libelle>Ton ticket</Libelle>
-          <div className="mt-3 rounded-[16px] border border-[#f2f2f2] bg-white p-4">
+          <div className="mt-3 rounded-[16px] border border-[#EBEBEB] bg-white p-4">
             <QRCodeSVG value={reservation.ticket} size={220} level="M" />
           </div>
-          <p className="mt-2 text-[13px] text-[#93939f]">Montre-le au comptoir</p>
+          <p className="mt-2 text-[13px] text-[#B0B0B0]">Montre-le au comptoir</p>
         </section>
       )}
 
-      <div className="mt-6 overflow-hidden rounded-[22px] bg-[#eeece7]" style={{ aspectRatio: "4/3" }}>
+      <div className="mt-6 overflow-hidden rounded-[22px] bg-[#F7F7F7]" style={{ aspectRatio: "4/3" }}>
         {reservation.plat_photo ? (
           <img src={reservation.plat_photo} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center">
-            <UtensilsCrossed size={48} strokeWidth={1.25} className="text-[#93939f]" />
+            <UtensilsCrossed size={48} strokeWidth={1.25} className="text-[#B0B0B0]" />
           </div>
         )}
       </div>
 
-      <p className="mt-4 text-[18px] font-medium text-[#212121]">{reservation.plat_nom}</p>
+      <p className="mt-4 text-[18px] font-medium text-[#222222]">{reservation.plat_nom}</p>
 
-      <section className="mt-2 divide-y divide-[#f2f2f2]">
+      <section className="mt-2 divide-y divide-[#EBEBEB]">
         <Ligne label="Portion" valeur={`${tiersEnFraction(reservation.tiers)} · ${fcfa(reservation.prix)}`} />
         <Ligne
           label="Créneau"
@@ -114,7 +114,7 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
         />
       </section>
 
-      <section className="mt-6 rounded-[16px] bg-[#003c33] px-5 py-6 text-center text-white">
+      <section className="mt-6 rounded-[16px] bg-[#222222] px-5 py-6 text-center text-white">
         {servie ? (
           <p className="text-[24px] font-medium" style={titreStyle}>Bon appétit !</p>
         ) : sec > 0 ? (
@@ -131,7 +131,7 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
 
 
       {erreur && (
-        <p role="alert" className="mt-6 bg-[#fff1f1] px-4 py-3 text-[14px] text-[#b30000]">
+        <p role="alert" className="mt-6 bg-[#FFF0ED] px-4 py-3 text-[14px] text-[#b30000]">
           {erreur}
         </p>
       )}
@@ -142,8 +142,8 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
             type="button"
             onClick={annuler}
             disabled={!reservation.annulable || envoi}
-            className={`h-[52px] w-full rounded-[32px] text-[16px] font-medium transition-colors disabled:bg-[#eeece7] disabled:text-[#93939f] ${
-              confirmer ? "bg-[#b30000] text-white" : "border border-[#d9d9dd] bg-white text-[#212121]"
+            className={`h-[52px] w-full rounded-[32px] text-[16px] font-medium transition-colors disabled:bg-[#F7F7F7] disabled:text-[#B0B0B0] ${
+              confirmer ? "bg-[#b30000] text-white" : "border border-[#EBEBEB] bg-white text-[#222222]"
             }`}
           >
             {envoi
@@ -152,7 +152,7 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
                 ? `Confirmer : remboursement de ${fcfa(reservation.prix)}`
                 : "Annuler la réservation"}
           </button>
-          <p className="mt-2 text-center text-[13px] text-[#93939f]">
+          <p className="mt-2 text-center text-[13px] text-[#B0B0B0]">
             {reservation.annulable
               ? `Annulation remboursée jusqu'à ${cloture}.`
               : `Annulation impossible après ${cloture} : la cuisine prépare déjà ton repas.`}

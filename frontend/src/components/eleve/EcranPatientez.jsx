@@ -13,9 +13,9 @@ function IconeAssiette() {
   return (
     <span
       aria-hidden="true"
-      className="flex h-[120px] w-[120px] items-center justify-center rounded-full border-[1.5px] border-[#d9d9dd]"
+      className="flex h-[120px] w-[120px] items-center justify-center rounded-full border-[1.5px] border-[#EBEBEB]"
     >
-      <UtensilsCrossed size={52} strokeWidth={1.25} color="#d9d9dd" />
+      <UtensilsCrossed size={52} strokeWidth={1.25} color="#EBEBEB" />
     </span>
   );
 }
@@ -36,10 +36,10 @@ export default function EcranPatientez({ me, raison }) {
       </button>
 
       <IconeAssiette />
-      <h1 className="mt-6 text-[24px] font-medium text-[#212121]" style={titreStyle}>
+      <h1 className="mt-6 text-[24px] font-medium text-[#222222]" style={titreStyle}>
         {titre}
       </h1>
-      <p className="mt-2 text-[15px] text-[#616161]">{sous}</p>
+      <p className="mt-2 text-[15px] text-[#717171]">{sous}</p>
     </div>
   );
 }

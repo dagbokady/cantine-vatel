@@ -24,7 +24,7 @@ export default function PortionPicker({ plat, tiers, onChange }) {
         <AssietteRiz fraction={tiers / 3} />
       </div>
 
-      <p className="mt-4 text-[32px] font-medium text-[#212121]" style={titreStyle}>
+      <p className="mt-4 text-[32px] font-medium text-[#222222]" style={titreStyle}>
         {fcfa(prix)}
       </p>
 
@@ -52,18 +52,18 @@ export default function PortionPicker({ plat, tiers, onChange }) {
             if (e.key === "ArrowLeft" || e.key === "ArrowDown") onChange(Math.max(tiers - 1, 1));
           }}
         >
-          <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-[2px] bg-[#eeece7]" />
+          <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-[2px] bg-[#F7F7F7]" />
           {TIERS.map((v) => (
             <span
               key={v}
               className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors ${
-                v <= tiers ? "bg-[#003c33]" : "bg-[#d9d9dd]"
+                v <= tiers ? "bg-[#FF5A5F]" : "bg-[#EBEBEB]"
               }`}
               style={{ left: `${((v - 1) / 2) * 100}%` }}
             />
           ))}
           <span
-            className="absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#17171c] shadow-[0_1px_4px_rgba(0,0,0,0.2)]"
+            className="absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#222222] shadow-[0_1px_4px_rgba(0,0,0,0.2)]"
             style={{ left: `${pos}%`, transition: "left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
           />
         </div>
@@ -73,7 +73,7 @@ export default function PortionPicker({ plat, tiers, onChange }) {
               key={v}
               type="button"
               onClick={() => onChange(v)}
-              className="absolute top-0 -translate-x-1/2 text-[14px] text-[#616161]"
+              className="absolute top-0 -translate-x-1/2 text-[14px] text-[#717171]"
               style={{ left: `${((v - 1) / 2) * 100}%` }}
             >
               {tiersEnFraction(v)}

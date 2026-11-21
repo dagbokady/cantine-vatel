@@ -6,6 +6,7 @@ import { useReservation } from "../../hooks/useReservation";
 import { useI18n } from "../../utils/i18n";
 import { decouperNomPlat, fcfa } from "../../utils/format";
 import { BackHeader, BottomCTA, SelectCard } from "../../components/ui";
+import { titreStyle } from "../../utils/tokens";
 
 const LIBELLE_TYPE = {
   principal: "Plat du jour",
@@ -16,18 +17,26 @@ const LIBELLE_TYPE = {
 function OptionCarte({ option, actif, onClick }) {
   const { nom, mention } = decouperNomPlat(option.nom);
   return (
-    <SelectCard actif={actif} onClick={onClick}>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[16px] font-medium text-[#212121]">{nom}</span>
-        {mention && (
-          <span className="rounded-full bg-[#eeece7] px-2.5 py-0.5 text-[12px] text-[#212121]">
-            {mention}
+    <SelectCard actif={actif} onClick={onClick} pad={10}>
+      <div className="flex items-center gap-3.5 pr-8">
+        {option.photo ? (
+          <img src={option.photo} alt="" className="h-16 w-16 shrink-0 rounded-[14px] object-cover" />
+        ) : (
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[14px] bg-[#FFF0ED] text-[#FF5A5F]">
+            <UtensilsCrossed size={22} strokeWidth={1.75} />
           </span>
         )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] text-[#717171]">{LIBELLE_TYPE[option.type] || "Plat"}</p>
+          <p className="truncate text-[16px] font-medium text-[#222222]">{nom}</p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            <span className="text-[14px] font-semibold text-[#222222]">{fcfa(option.prix)}</span>
+            {mention && (
+              <span className="rounded-full bg-[#F7F7F7] px-2 py-0.5 text-[12px] text-[#717171]">{mention}</span>
+            )}
+          </div>
+        </div>
       </div>
-      <p className="mt-1 text-[14px] text-[#616161]">
-        {fcfa(option.prix)} · {LIBELLE_TYPE[option.type] || "Plat"}
-      </p>
     </SelectCard>
   );
 }
@@ -69,39 +78,62 @@ export default function Reservation() {
   );
 
   return (
-    <div className="min-h-screen bg-white pb-28">
-      <BackHeader titre="Choisir mon repas" to="/" />
+    <div className="min-h-screen bg-white pb-32">
+      <BackHeader titre="Choisis ton repas" etape={1} to="/" />
 
-      <main className="px-5 pt-6">
-        <div className="overflow-hidden rounded-[22px] bg-[#eeece7]" style={{ aspectRatio: "4/3" }}>
+      <main className="mx-auto max-w-[560px] px-5 pt-5">
+        <div className="relative overflow-hidden rounded-[22px] bg-[#F7F7F7]" style={{ aspectRatio: "16/11" }}>
           {photo ? (
             <img src={photo} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center">
-              <UtensilsCrossed size={48} strokeWidth={1.25} className="text-[#93939f]" />
+              <UtensilsCrossed size={48} strokeWidth={1.25} className="text-[#B0B0B0]" />
             </div>
           )}
+          <span className="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-[12px] font-medium text-[#222222] shadow-[0_2px_8px_rgba(0,0,0,0.12)]">
+            Au menu aujourd'hui
+          </span>
         </div>
 
         {error && (
-          <p className="mt-5 bg-[#fff1f1] px-4 py-3 text-[14px] text-[#b30000]">{error}</p>
+          <p className="mt-5 rounded-[14px] bg-[#FFF0ED] px-4 py-3 text-[14px] text-[#B30000]">{error}</p>
         )}
-        {!menu && !error && <p className="mt-5 text-[14px] text-[#93939f]">Chargement…</p>}
+        {!menu && !error && <p className="mt-5 text-[14px] text-[#B0B0B0]">Chargement…</p>}
         {menu && options.length === 0 && !error && (
-          <p className="mt-5 text-[15px] text-[#616161]">Aucun plat disponible pour le moment.</p>
+          <p className="mt-5 text-[15px] text-[#717171]">Aucun plat disponible pour le moment.</p>
         )}
 
-        <ul className="mt-5 space-y-3">{plats.map(carte)}</ul>
+        {plats.length > 0 && (
+          <>
+            <h2 className="mt-7 text-[18px] font-semibold text-[#222222]" style={titreStyle}>Plats</h2>
+            <ul className="mt-3 space-y-3">{plats.map(carte)}</ul>
+          </>
+        )}
 
         {accompagnements.length > 0 && (
           <>
-            {plats.length > 0 && <hr className="my-5 border-0 border-t border-[#d9d9dd]" />}
-            <ul className="space-y-3">{accompagnements.map(carte)}</ul>
+            <h2 className="mt-7 text-[18px] font-semibold text-[#222222]" style={titreStyle}>Ou juste un accompagnement</h2>
+            <ul className="mt-3 space-y-3">{accompagnements.map(carte)}</ul>
           </>
         )}
       </main>
 
-      <BottomCTA disabled={!choix} onClick={() => navigate("/reservation/quantite")}>
+      <BottomCTA
+        disabled={!choix}
+        onClick={() => navigate("/reservation/quantite")}
+        aside={
+          choix ? (
+            <>
+              <p className="text-[12px] text-[#717171]">Ton choix</p>
+              <p className="truncate text-[16px] font-semibold text-[#222222]" style={titreStyle}>
+                {decouperNomPlat(choix.nom).nom}
+              </p>
+            </>
+          ) : (
+            <p className="text-[14px] leading-snug text-[#717171]">Choisis un plat</p>
+          )
+        }
+      >
         {t("suivant")}
       </BottomCTA>
     </div>

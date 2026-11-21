@@ -40,7 +40,7 @@ function PinInput({ value, onChange }) {
           onChange={(e) => saisir(i, e.target.value)}
           onKeyDown={(e) => touche(i, e)}
           onFocus={(e) => e.target.select()}
-          className="h-12 w-12 rounded-[12px] border border-[#d9d9dd] bg-white text-center text-[24px] text-[#212121] outline-none transition-colors focus:border-[#003c33]"
+          className="h-12 w-12 rounded-[12px] border border-[#EBEBEB] bg-white text-center text-[24px] text-[#222222] outline-none transition-colors focus:border-[#222222]"
         />
       ))}
     </div>
@@ -83,15 +83,15 @@ export default function Login() {
   return (
     <div className="flex min-h-screen flex-col justify-center bg-white px-5 py-10">
       <div className="mx-auto w-full max-w-[400px]">
-        <h1 className="text-center text-[32px] font-medium text-[#003c33]" style={titreStyle}>
+        <h1 className="text-center text-[32px] font-medium text-[#222222]" style={titreStyle}>
           Cantine Vatel
         </h1>
-        <p className="mt-2 text-center text-[15px] text-[#616161]">
+        <p className="mt-2 text-center text-[15px] text-[#717171]">
           {premiere ? "Choisis ton code PIN à 4 chiffres" : "Connecte-toi avec ton matricule"}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-10">
-          <label className="block text-[13px] text-[#93939f]" htmlFor="matricule">
+          <label className="block text-[13px] text-[#B0B0B0]" htmlFor="matricule">
             Matricule
           </label>
           <input
@@ -102,10 +102,10 @@ export default function Login() {
             placeholder="LYC-2026-001"
             autoComplete="username"
             autoCapitalize="characters"
-            className="mt-1.5 h-12 w-full rounded-[12px] border border-[#d9d9dd] bg-white px-4 text-[16px] text-[#212121] outline-none transition-colors placeholder:text-[#93939f] focus:border-[#003c33]"
+            className="mt-1.5 h-12 w-full rounded-[12px] border border-[#EBEBEB] bg-white px-4 text-[16px] text-[#222222] outline-none transition-colors placeholder:text-[#B0B0B0] focus:border-[#222222]"
           />
 
-          <p className="mt-4 text-[13px] text-[#93939f]">
+          <p className="mt-4 text-[13px] text-[#B0B0B0]">
             {premiere ? "Nouveau code PIN" : "Code PIN"}
           </p>
           <PinInput value={pin} onChange={setPin} />
@@ -117,7 +117,7 @@ export default function Login() {
               setPin("");
               setError("");
             }}
-            className="mt-2 min-h-12 text-[13px] text-[#003c33] underline underline-offset-2"
+            className="mt-2 min-h-12 text-[13px] text-[#222222] underline underline-offset-2"
           >
             {premiere ? "J'ai déjà un PIN, me connecter" : "Première connexion ? Choisis ton PIN"}
           </button>
@@ -125,21 +125,21 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading || !matricule.trim() || pin.length < NB_CHIFFRES}
-            className="mt-2 h-[52px] w-full rounded-[32px] bg-[#17171c] text-[16px] font-medium text-white transition-colors disabled:bg-[#eeece7] disabled:text-[#93939f]"
+            className="mt-2 h-[52px] w-full rounded-[32px] bg-[#222222] text-[16px] font-medium text-white transition-colors disabled:bg-[#F7F7F7] disabled:text-[#B0B0B0]"
           >
             {loading ? "Connexion…" : premiere ? "Enregistrer mon PIN" : "Se connecter"}
           </button>
 
           <div className="mt-8 min-h-[44px]">
             {error && (
-              <p role="alert" className="w-full bg-[#fff1f1] px-4 py-3 text-[14px] text-[#b30000]">
+              <p role="alert" className="w-full bg-[#FFF0ED] px-4 py-3 text-[14px] text-[#b30000]">
                 {error}
               </p>
             )}
           </div>
         </form>
         <p className="text-center">
-          <Link to="/pro" className="inline-block min-h-12 py-3 text-[13px] text-[#616161] underline underline-offset-2">
+          <Link to="/pro" className="inline-block min-h-12 py-3 text-[13px] text-[#717171] underline underline-offset-2">
             Parent ou personnel ? Connecte-toi ici
           </Link>
         </p>
