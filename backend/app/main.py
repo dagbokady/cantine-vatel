@@ -15,7 +15,7 @@ from .services.tickets import public_key_pem
 @asynccontextmanager
 async def lifespan(_app):
     """Base d'allergènes et d'ingrédients toujours présente (ajouts seulement).
-    SEED_DEMO=true : données de démonstration si aucun compte n'existe (jamais d'effacement d'une base utilisée)."""
+    SEED_DEMO=true : données de démonstration si la base n'a encore aucun élève (jamais d'effacement d'une école en service)."""
     from .db import SessionLocal
     from .referentiel import charger_referentiel
 

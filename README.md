@@ -403,7 +403,7 @@ Sur Android et ordinateur, le bouton **Installer l'application** de la page Déc
 
 Mot de passe commun du personnel et des parents : **`motdepasse`**. Connexion sur `/pro`.
 
-En ligne (Render), ces comptes sont créés automatiquement au démarrage de l'API grâce à la variable `SEED_DEMO=true`, à condition que la base ne contienne encore aucun compte. Une base déjà utilisée n'est jamais effacée.
+En ligne (Render), ces comptes sont créés automatiquement au démarrage de l'API grâce à la variable `SEED_DEMO=true`, à condition que la base ne contienne encore aucun élève (un compte parent créé pour essayer est alors remplacé). Une école en service n'est jamais effacée.
 
 | Rôle | Identifiant | Ce qu'on y voit |
 |---|---|---|

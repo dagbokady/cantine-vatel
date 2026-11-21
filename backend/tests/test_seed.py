@@ -1,20 +1,21 @@
-"""SEED_DEMO : la démonstration n'est chargée que sur une base sans aucun compte."""
+"""SEED_DEMO : la démonstration n'est chargée que sur une base sans aucun élève."""
 from sqlalchemy import select
 
 from app import seed
 from app.models import User
 
 
-def test_jamais_sur_une_base_utilisee(db, user, monkeypatch):
-    user("admin")
+def test_jamais_sur_une_ecole_en_service(db, eleve, monkeypatch):
+    eleve()
     appels = []
     monkeypatch.setattr(seed, "run", appels.append)
     assert seed.charger_demo_si_vide(db) is False
     assert appels == []
 
 
-def test_charge_la_demo_sur_une_base_vide(db, monkeypatch):
-    # Simule une base vide pour le seul test d'existence, puis lance le vrai seed (transaction annulée).
+def test_charge_la_demo_sur_une_base_sans_eleve(db, user, monkeypatch):
+    # Un compte parent de test existe, mais aucun élève : la démonstration le remplace.
+    user("parent")
     scalars = db.scalars
     premier = [True]
 

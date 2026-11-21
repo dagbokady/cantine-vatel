@@ -677,8 +677,9 @@ def demo_eleves(db, awa, eleve2, parent_awa, plats_by_name, creneaux, places, me
 
 
 def charger_demo_si_vide(db: Session) -> bool:
-    """Charge la démonstration seulement si aucun compte n'existe : une base utilisée n'est jamais effacée."""
-    if db.scalars(select(User.id).limit(1)).first() is not None:
+    """Charge la démonstration seulement si la base n'a encore aucun élève.
+    Des comptes de test isolés (un parent inscrit pour essayer) sont remplacés ; une école en service n'est jamais effacée."""
+    if db.scalars(select(Eleve.id).limit(1)).first() is not None:
         return False
     run(db)
     db.commit()

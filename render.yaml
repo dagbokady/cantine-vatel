@@ -30,11 +30,12 @@ services:
         sync: false
       - key: COMPTOIR_CONTROLE_CRENEAU
         value: "true"
-      # Données de démonstration (comptes du README) chargées au démarrage si la base n'a encore aucun compte.
+      # Données de démonstration (comptes du README) chargées au démarrage si la base n'a encore aucun élève.
       # Une base déjà utilisée n'est jamais effacée. Passer à "false" pour une vraie mise en service.
       - key: SEED_DEMO
         value: "true"
-      # E-mails « mot de passe oublié » (Brevo, ou Gmail avec un mot de passe d'application).
+      # E-mails « mot de passe oublié » via Mailjet (SMTP_HOST=in-v3.mailjet.com). Render gratuit bloque les ports SMTP :
+      # l'envoi passe alors par l'API HTTPS de Mailjet. SMTP_USER = clé API, SMTP_PASSWORD = clé secrète.
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
