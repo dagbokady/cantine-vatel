@@ -7,6 +7,7 @@ en prod (le ticket devient invérifiable après redémarrage).
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 from functools import lru_cache
 
@@ -24,6 +25,9 @@ def _private_key() -> Ed25519PrivateKey:
     pem = (settings.ticket_signing_key or "").strip()
     if not pem:
         return Ed25519PrivateKey.generate()
+    if "BEGIN" not in pem:
+        # Valeur aléatoire (ex. générée par Render) : la graine de 32 octets en est dérivée.
+        return Ed25519PrivateKey.from_private_bytes(hashlib.sha256(pem.encode()).digest())
     key = serialization.load_pem_private_key(pem.encode(), password=None)
     if not isinstance(key, Ed25519PrivateKey):
         raise RuntimeError("TICKET_SIGNING_KEY n'est pas une clé Ed25519.")

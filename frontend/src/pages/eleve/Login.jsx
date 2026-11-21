@@ -129,7 +129,7 @@ export default function Login({ borne = false }) {
       const st = err.response?.status;
 
       setError(
-          st === 409 || st === 422
+          st === 409 || st === 422 || st === 429
               ? err.response.data.detail
               : st === 401 || st === 404
                   ? premiere

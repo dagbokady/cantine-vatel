@@ -3,3 +3,6 @@ backend/.venv/
 __pycache__/
 *.pyc
 backend/static/plats/
+
+# Exports de base (données personnelles, hachages de mots de passe)
+*.dump

@@ -1,8 +1,11 @@
 import axios from "axios";
 
 const api = axios.create({
-  // Même hôte que la page : localhost sur le PC, IP du PC depuis un téléphone.
-  baseURL: `${window.location.protocol}//${window.location.hostname}:8000`,
+  // En ligne : VITE_API_URL (adresse du backend Render, définie sur Vercel).
+  // En dev : même hôte que la page, localhost sur le PC, IP du PC depuis un téléphone.
+  baseURL: import.meta.env.PROD && import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace(/\/$/, "")
+    : `${window.location.protocol}//${window.location.hostname}:8000`,
   headers: { "Content-Type": "application/json" },
 });
 

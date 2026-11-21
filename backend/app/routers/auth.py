@@ -1,7 +1,7 @@
 import time
 from html import escape
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -30,15 +30,21 @@ from ..services.auth import (
 )
 from ..config import settings
 from ..services.mail import envoyer
+from ..services import limites
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
-    eleve = authenticate_eleve(db, normaliser_matricule(body.matricule), body.pin)
+def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    matricule = normaliser_matricule(body.matricule)
+    compte = f"eleve:{matricule}"
+    limites.verifier(request, compte)
+    eleve = authenticate_eleve(db, matricule, body.pin)
     if eleve is None:
+        limites.echec(request, compte)
         raise HTTPException(status_code=401, detail="Matricule ou PIN incorrect.")
+    limites.succes(compte)
     token = create_token(eleve)
     return TokenResponse(
         access_token=token,
@@ -48,9 +54,11 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/pin", response_model=TokenResponse)
-def set_pin(body: SetPinRequest, db: Session = Depends(get_db)):
+def set_pin(body: SetPinRequest, request: Request, db: Session = Depends(get_db)):
+    limites.verifier(request, "pin")
     eleve = db.scalars(select(Eleve).where(Eleve.matricule == normaliser_matricule(body.matricule))).first()
     if eleve is None:
+        limites.echec(request, "pin")
         raise HTTPException(status_code=404, detail="Matricule inconnu.")
     if eleve.pin_hash is not None:
         raise HTTPException(
@@ -69,10 +77,14 @@ def set_pin(body: SetPinRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/user/login", response_model=UserTokenResponse)
-def user_login(body: UserLoginRequest, db: Session = Depends(get_db)):
+def user_login(body: UserLoginRequest, request: Request, db: Session = Depends(get_db)):
+    compte = f"user:{body.identifiant.strip().lower()}"
+    limites.verifier(request, compte)
     user = authenticate_user(db, body.identifiant, body.mot_de_passe)
     if user is None:
+        limites.echec(request, compte)
         raise HTTPException(status_code=401, detail="Identifiant ou mot de passe incorrect.")
+    limites.succes(compte)
     return UserTokenResponse(access_token=create_user_token(user), nom=user.nom, role=user.role)
 
 
@@ -105,7 +117,7 @@ def mot_de_passe_oubli(body: MotDePasseOubliRequest, taches: BackgroundTasks, db
     user = db.scalars(select(User).where(User.identifiant == identifiant)).first()
     if not recent and user and user.actif and user.role in ROLES_RESET and "@" in identifiant:
         _derniers_envois[identifiant] = maintenant
-        lien = f"{settings.frontend_url.rstrip('/')}/pro/reinitialiser?token={create_reset_token(user)}"
+        lien = f"{settings.url_publique}/pro/reinitialiser?token={create_reset_token(user)}"
         texte = (
             f"Bonjour {user.nom},\n\nPour choisir un nouveau mot de passe Cantine Vatel, ouvrez ce lien "
             f"(valable 30 minutes, une seule fois) :\n{lien}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail."

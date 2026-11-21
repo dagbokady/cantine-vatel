@@ -116,3 +116,12 @@ def user(db):
 def entete(u):
     tok = create_user_token(u) if isinstance(u, User) else create_token(u)
     return {"Authorization": f"Bearer {tok}"}
+
+
+@pytest.fixture(autouse=True)
+def _limites_videes():
+    from app.services import limites
+
+    limites.reinitialiser()
+    yield
+    limites.reinitialiser()

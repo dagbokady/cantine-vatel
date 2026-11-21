@@ -26,17 +26,32 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title="Cantine Vatel", lifespan=lifespan)
+settings.verifier_production()
+
+# En production : pas de documentation publique de l'API.
+_docs = {"docs_url": None, "redoc_url": None, "openapi_url": None} if settings.production else {}
+app = FastAPI(title="Cantine Vatel", lifespan=lifespan, **_docs)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
-    # Réseau local (téléphone sur le même Wi-Fi que le PC de dev).
-    allow_origin_regex=r"http://(192\.168|10|172\.(1[6-9]|2\d|3[01]))(\.\d{1,3}){2,3}(:\d+)?",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # Réseau local (téléphone sur le même Wi-Fi que le PC de dev) : jamais en production.
+    allow_origin_regex=None if settings.production else r"http://(192\.168|10|172\.(1[6-9]|2\d|3[01]))(\.\d{1,3}){2,3}(:\d+)?",
+    # Authentification par jeton Bearer, pas par cookie.
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+@app.middleware("http")
+async def entetes_securite(request, call_next):
+    reponse = await call_next(request)
+    reponse.headers.setdefault("X-Content-Type-Options", "nosniff")
+    reponse.headers.setdefault("Referrer-Policy", "no-referrer")
+    if settings.production:
+        reponse.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return reponse
 
 app.include_router(auth.router)
 app.include_router(eleve.router)
