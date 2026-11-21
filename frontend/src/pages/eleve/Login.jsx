@@ -25,60 +25,96 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      {/* Header band */}
-      <div className="bg-[#003c33] px-5 pb-8 pt-14">
-        <h1
-          className="text-[28px] font-bold leading-tight text-white"
-          style={{ fontFamily: "Space Grotesk, sans-serif", letterSpacing: "-0.03em" }}
+    <div className="flex min-h-screen bg-[var(--color-canvas)]">
+      {/* Left panel: brand — hidden on mobile */}
+      <div
+        className="relative hidden md:flex md:w-1/2 flex-col items-center justify-center"
+        style={{ background: "linear-gradient(135deg, var(--color-surface-soft) 0%, #fff0ed 100%)" }}
+      >
+        <img src="/logo.svg" alt="Cantine Vatel" className="h-32 w-32" />
+        <p
+          className="mt-6 text-[22px] font-medium text-[var(--color-ink)]"
+          style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.44px" }}
         >
           Cantine Vatel
-        </h1>
-        <p className="mt-1 text-sm text-white/70">Connecte-toi pour commander</p>
+        </p>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="flex flex-1 flex-col px-5 pt-8">
-        <label className="text-sm font-medium text-[#212121]">
-          Matricule
-          <input
-            type="text"
-            value={matricule}
-            onChange={(e) => setMatricule(e.target.value)}
-            placeholder="LYC-2026-001"
-            autoComplete="username"
-            className="mt-1.5 block w-full rounded-xl border border-[#d9d9dd] bg-[#eeece7]/40 px-4 py-3 text-base text-[#212121] placeholder:text-[#93939f] focus:border-[#003c33] focus:outline-none"
-          />
-        </label>
-
-        <label className="mt-5 text-sm font-medium text-[#212121]">
-          Code PIN
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-            placeholder="••••"
-            autoComplete="current-password"
-            className="mt-1.5 block w-full rounded-xl border border-[#d9d9dd] bg-[#eeece7]/40 px-4 py-3 text-base text-[#212121] placeholder:text-[#93939f] focus:border-[#003c33] focus:outline-none"
-          />
-        </label>
-
-        {error && (
-          <p className="mt-4 text-sm font-medium text-[#b30000]">{error}</p>
-        )}
-
-        <div className="mt-auto pb-8 pt-8">
-          <button
-            type="submit"
-            disabled={loading || !matricule || pin.length < 4}
-            className="w-full rounded-[32px] bg-[#17171c] px-6 py-3.5 text-[15px] font-semibold text-white disabled:opacity-40"
+      {/* Right / main: form */}
+      <div className="flex w-full flex-col md:w-1/2">
+        {/* Mobile brand header */}
+        <div className="flex flex-col items-center pt-16 pb-6 md:hidden">
+          <img src="/logo.svg" alt="Cantine Vatel" className="h-20 w-20" />
+          <p
+            className="mt-3 text-[18px] font-medium text-[var(--color-ink)]"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.02em" }}
           >
-            {loading ? "Connexion…" : "Se connecter"}
-          </button>
+            Cantine Vatel
+          </p>
         </div>
-      </form>
+
+        <div className="flex flex-1 flex-col justify-center px-6 pb-10 md:px-16 lg:px-24">
+          <h1
+            className="text-[28px] font-bold text-[var(--color-ink)]"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", lineHeight: 1.14, letterSpacing: "-0.02em" }}
+          >
+            Bienvenue
+          </h1>
+          <p className="mt-2 text-[16px] text-[var(--color-muted)]" style={{ lineHeight: 1.5 }}>
+            Connecte-toi pour commander.
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-8">
+            <div>
+              <label className="text-[14px] font-medium text-[var(--color-muted)]">
+                Matricule
+              </label>
+              <input
+                type="text"
+                value={matricule}
+                onChange={(e) => setMatricule(e.target.value)}
+                placeholder="LYC-2026-001"
+                autoComplete="username"
+                className="mt-1.5 block w-full border-b-2 border-[var(--color-hairline)] bg-transparent px-0 py-3 text-[16px] text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] focus:border-[var(--color-ink)] focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div className="mt-6">
+              <label className="text-[14px] font-medium text-[var(--color-muted)]">
+                Code PIN
+              </label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                placeholder="••••"
+                autoComplete="current-password"
+                className="mt-1.5 block w-full border-b-2 border-[var(--color-hairline)] bg-transparent px-0 py-3 text-[16px] text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] focus:border-[var(--color-ink)] focus:outline-none transition-colors"
+              />
+            </div>
+
+            {error && (
+              <p className="mt-4 text-[14px] text-[var(--color-error)]">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !matricule || pin.length < 4}
+              className="mt-8 w-full py-3.5 text-[16px] font-medium text-[var(--color-on-primary)] disabled:opacity-40 active:brightness-90 transition-all"
+              style={{
+                backgroundColor: "var(--color-primary)",
+                borderRadius: "var(--rounded-sm)",
+              }}
+            >
+              {loading ? "Connexion…" : "Se connecter"}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

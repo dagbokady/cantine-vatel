@@ -32,15 +32,17 @@ export default function Accueil() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white text-sm text-[#93939f]">
-        Chargement…
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-canvas)]">
+        <img src="/logo.svg" alt="" className="h-16 w-16 animate-pulse" />
+        <p className="mt-4 text-[14px] text-[var(--color-muted-soft)]">Chargement…</p>
       </div>
     );
   }
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-sm text-[#b30000]">
-        {error}
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-canvas)] px-6 text-center">
+        <img src="/logo.svg" alt="" className="h-16 w-16 opacity-40" />
+        <p className="mt-4 text-[14px] text-[var(--color-error)]">{error}</p>
       </div>
     );
   }
