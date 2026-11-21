@@ -30,18 +30,25 @@ class AllergiesRequest(BaseModel):
 
 
 class RechargeRequest(BaseModel):
+    eleve_id: int
     montant: int = Field(ge=500, le=100000)
+    operateur: str = Field(pattern="^(wave|mtn|orange|moov)$")
+    telephone: str = Field(min_length=1, max_length=20)
+    cle_idempotence: str = Field(min_length=16, max_length=64, pattern="^[A-Za-z0-9-]+$")
+    simuler_echec: bool = False
 
 
-class PaiementOut(BaseModel):
+class RechargeOut(BaseModel):
     reference: str
-    statut: str
+    statut: str  # en_attente, validee, echouee
     montant: int
+    eleve_id: int
+    eleve_nom: str
+    operateur: str
+    telephone_masque: str
+    motif_echec: str | None
+    created_at: datetime
     solde: int
-
-
-class WebhookRequest(BaseModel):
-    reference: str
 
 
 class RepasOut(BaseModel):

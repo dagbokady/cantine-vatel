@@ -17,6 +17,7 @@ import AjouterEnfant from "./pages/parent/AjouterEnfant";
 import Enfant from "./pages/parent/Enfant";
 import MenuSemaine from "./pages/parent/MenuSemaine";
 import Notifications from "./pages/parent/Notifications";
+import Paiements from "./pages/parent/Paiements";
 import Service from "./pages/cuisine/Service";
 import SalleCuisine from "./pages/cuisine/Salle";
 import Retours from "./pages/cuisine/Retours";
@@ -95,6 +96,7 @@ export default function App() {
                 <Route path="/parent/enfant/:id" element={R(["parent"], <Enfant />)} />
                 <Route path="/parent/menu" element={R(["parent"], <MenuSemaine />)} />
                 <Route path="/parent/notifications" element={R(["parent"], <Notifications />)} />
+                <Route path="/parent/paiements" element={R(["parent"], <Paiements />)} />
                 <Route path="/cuisine" element={R(["cuisine", "admin"], <Service />)} />
                 <Route path="/cuisine/salle" element={R(["cuisine", "admin"], <SalleCuisine />)} />
                 <Route path="/cuisine/retours" element={R(["cuisine", "admin"], <Retours />)} />

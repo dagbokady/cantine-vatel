@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { activerAcces, getAllergenes, getEnfants, getHistoriqueEnfant, majAllergies, recharger } from "../../api/pro";
-import { Pencil } from "lucide-react";
+import { activerAcces, getAllergenes, getEnfants, getHistoriqueEnfant, majAllergies } from "../../api/pro";
+import { Pencil, Wallet } from "lucide-react";
+import Recharge from "../../components/parent/Recharge";
 import EspaceLayout, { Alerte, Bouton } from "../../components/EspaceLayout";
 import Panneau, { BoutonAction } from "../../components/Panneau";
 import { Avatar } from "../../components/ui";
@@ -9,7 +10,6 @@ import { fcfa, tiersEnFraction } from "../../utils/format";
 import { titreStyle } from "../../utils/tokens";
 import { ONGLETS_PARENT } from "./onglets";
 
-const MONTANTS = [1000, 2000, 5000, 10000];
 const STATUT = { commandee: "Commandé", servie: "Servi", annulee: "Annulé" };
 const dateFr = (iso) => new Date(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
 
@@ -29,7 +29,7 @@ export default function Enfant() {
   const [tous, setTous] = useState([]);
   const [allergies, setAllergies] = useState([]);
   const [regime, setRegime] = useState("");
-  const [montant, setMontant] = useState(2000);
+  const [recharge, setRecharge] = useState(false);
   const [msg, setMsg] = useState({ texte: "", ok: true });
   const [envoi, setEnvoi] = useState(false);
   const [edition, setEdition] = useState(false);
@@ -77,21 +77,12 @@ export default function Enfant() {
             <p className={`text-[36px] font-semibold leading-none ${enfant.solde < 0 ? "text-[#FF5A5F]" : "text-white"}`} style={titreStyle}>{fcfa(enfant.solde)}</p>
           </div>
         </div>
-        <div className="bg-white/[0.06] p-5">
-          <p className="text-[13px] text-white/60">Recharger le crédit</p>
-          <div className="mt-3 grid grid-cols-4 gap-2">
-            {MONTANTS.map((m) => (
-              <button key={m} type="button" onClick={() => setMontant(m)} aria-pressed={montant === m}
-                className={`h-11 rounded-full text-[13px] font-medium transition-colors ${montant === m ? "bg-white text-[#222222]" : "bg-white/10 text-white hover:bg-white/20"}`}>
-                {fcfa(m).replace(/\s?F$/, "")}
-              </button>
-            ))}
-          </div>
-          <Bouton variante="corail" className="mt-4 h-[52px] w-full" disabled={envoi}
-            onClick={() => action(() => recharger(enfant.id, montant), `Recharge de ${fcfa(montant)} validée.`)}>
-            Payer {fcfa(montant)}
-          </Bouton>
-          <p className="mt-2 text-center text-[12px] text-white/40">Paiement simulé</p>
+        <div className="flex items-center justify-between gap-3 bg-white/[0.06] px-5 py-4">
+          <p className="text-[13px] text-white/60">Wave, MTN, Orange, Moov</p>
+          <button type="button" onClick={() => setRecharge(true)}
+            className="flex h-11 items-center gap-2 rounded-full bg-[#FF5A5F] px-5 text-[14px] font-medium text-white transition-colors hover:bg-[#E94E53]">
+            <Wallet size={16} /> Recharger
+          </button>
         </div>
       </div>
       <div className="mt-4"><Alerte ok={msg.ok}>{msg.texte}</Alerte></div>
@@ -137,9 +128,9 @@ export default function Enfant() {
             <li key={t.id} className="flex items-center justify-between gap-3 py-3">
               <div className="min-w-0">
                 <p className="truncate text-[15px] text-[#222222]">{t.libelle}</p>
-                <p className="text-[12px] text-[#B0B0B0]">{new Date(t.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}{t.statut !== "validee" && ` · ${t.statut}`}</p>
+                <p className="text-[12px] text-[#B0B0B0]">{new Date(t.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}{t.statut !== "validee" && ` · ${t.statut === "echouee" ? "échoué, non crédité" : "en attente"}`}</p>
               </div>
-              <span className={`shrink-0 text-[15px] font-semibold ${t.montant >= 0 ? "text-[#FF5A5F]" : "text-[#222222]"}`}>
+              <span className={`shrink-0 text-[15px] font-semibold ${t.statut !== "validee" ? "text-[#B0B0B0] line-through" : t.montant >= 0 ? "text-[#FF5A5F]" : "text-[#222222]"}`}>
                 {t.montant >= 0 ? "+" : ""}{fcfa(t.montant)}
               </span>
             </li>
@@ -158,6 +149,9 @@ export default function Enfant() {
           </Bouton>
         </div>
       </Section>
+      {recharge && (
+        <Recharge ouvert enfants={[enfant]} enfantId={enfant.id} onClose={() => setRecharge(false)} onTermine={() => charger()} />
+      )}
       <Panneau ouvert={edition} onClose={() => setEdition(false)} titre="Allergies et régime" surTitre={enfant.nom}
         pied={
           <Bouton className="w-full" disabled={!modifie || envoi}

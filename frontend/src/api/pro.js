@@ -18,7 +18,9 @@ export const rattacherEnfant = (matricule) => post("/parent/enfants", { matricul
 export const getAllergenes = () => get("/parent/allergenes");
 export const majAllergies = (id, allergies, regime) => put(`/parent/enfants/${id}/allergies`, { allergies, regime });
 export const activerAcces = (id) => post(`/parent/enfants/${id}/acces`);
-export const recharger = (id, montant) => post(`/parent/enfants/${id}/recharge`, { montant });
+export const creerRecharge = (body) => post("/parent/recharges", body);
+export const traiterRecharge = (ref) => post(`/parent/recharges/${ref}/traiter`);
+export const getRecharges = () => get("/parent/recharges");
 export const getHistoriqueEnfant = (id) => get(`/parent/enfants/${id}/historique`);
 export const getMenuSemaine = () => get("/parent/menu");
 export const getNotifications = () => get("/parent/notifications");

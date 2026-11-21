@@ -14,16 +14,15 @@ from ..schemas.parent import (
     HistoriqueEnfant,
     JourMenu,
     NotificationOut,
-    PaiementOut,
     PlatMenu,
     RattacherRequest,
+    RechargeOut,
     RechargeRequest,
     RepasOut,
     TransactionOut,
-    WebhookRequest,
 )
 from ..services.eleve import _allergenes_par_plat, _ingredients_par_plat
-from ..services.paiement import initier_recharge, valider_paiement
+from ..services.paiement import creer_recharge, traiter_recharge
 
 router = APIRouter(prefix="/parent", tags=["parent"])
 parent_dep = require_roles("parent")
@@ -104,16 +103,48 @@ def activer_acces(eleve_id: int, parent: User = Depends(parent_dep), db: Session
     return _out(e)
 
 
-@router.post("/enfants/{eleve_id}/recharge", response_model=PaiementOut)
-def recharger(eleve_id: int, body: RechargeRequest, parent: User = Depends(parent_dep), db: Session = Depends(get_db)):
-    e = _enfant(db, parent, eleve_id)
-    tx = initier_recharge(db, e, body.montant)
+def _recharge_out(t: Transaction, e: Eleve) -> RechargeOut:
+    return RechargeOut(
+        reference=t.reference_externe,
+        statut=t.statut,
+        montant=t.montant,
+        eleve_id=e.id,
+        eleve_nom=e.nom,
+        operateur=t.operateur,
+        telephone_masque=t.telephone_masque,
+        motif_echec=t.motif_echec,
+        created_at=t.created_at,
+        solde=e.solde,
+    )
+
+
+@router.post("/recharges", response_model=RechargeOut, status_code=201)
+def creer(body: RechargeRequest, parent: User = Depends(parent_dep), db: Session = Depends(get_db)):
+    """Étape 1 : transaction simulée « en_attente ». Aucun crédit à ce stade."""
+    e = _enfant(db, parent, body.eleve_id)
+    tx = creer_recharge(db, parent, e, body.montant, body.operateur, body.telephone, body.cle_idempotence, body.simuler_echec)
     db.commit()
-    # Paiement simulé : l'agrégateur confirme aussitôt (équivalent du webhook).
-    tx = valider_paiement(db, tx.reference_externe)
+    return _recharge_out(tx, e)
+
+
+@router.post("/recharges/{reference}/traiter", response_model=RechargeOut)
+def traiter(reference: str, parent: User = Depends(parent_dep), db: Session = Depends(get_db)):
+    """Étape 2 : traitement simulé. Crédite le portefeuille une seule fois, uniquement en cas de succès."""
+    tx = traiter_recharge(db, parent, reference)
     db.commit()
-    db.refresh(e)
-    return PaiementOut(reference=tx.reference_externe, statut=tx.statut, montant=tx.montant, solde=e.solde)
+    return _recharge_out(tx, db.get(Eleve, tx.eleve_id))
+
+
+@router.get("/recharges", response_model=list[RechargeOut])
+def recharges(parent: User = Depends(parent_dep), db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(Transaction, Eleve)
+        .join(Eleve, Eleve.id == Transaction.eleve_id)
+        .where(Transaction.parent_id == parent.id, Transaction.operateur.is_not(None))
+        .order_by(desc(Transaction.created_at))
+        .limit(100)
+    ).all()
+    return [_recharge_out(t, e) for t, e in rows]
 
 
 @router.get("/enfants/{eleve_id}/historique", response_model=HistoriqueEnfant)
@@ -194,15 +225,3 @@ def notifications(parent: User = Depends(parent_dep), db: Session = Depends(get_
 def marquer_lues(parent: User = Depends(parent_dep), db: Session = Depends(get_db)):
     db.execute(update(Notification).where(Notification.parent_id == parent.id).values(lue=True))
     db.commit()
-
-
-paiements = APIRouter(prefix="/paiements", tags=["paiements"])
-
-
-@paiements.post("/webhook", response_model=PaiementOut)
-def webhook(body: WebhookRequest, db: Session = Depends(get_db)):
-    """Appelé par l'agrégateur. Le statut est revérifié auprès de lui ; idempotent."""
-    tx = valider_paiement(db, body.reference)
-    db.commit()
-    e = db.get(Eleve, tx.eleve_id)
-    return PaiementOut(reference=tx.reference_externe, statut=tx.statut, montant=tx.montant, solde=e.solde)
