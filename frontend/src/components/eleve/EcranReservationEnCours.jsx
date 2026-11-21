@@ -80,6 +80,16 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
         Ma réservation
       </h1>
 
+      {!servie && (
+        <section className="mt-5 flex flex-col items-center">
+          <Libelle>Ton ticket</Libelle>
+          <div className="mt-3 rounded-[16px] border border-[#f2f2f2] bg-white p-4">
+            <QRCodeSVG value={reservation.ticket} size={220} level="M" />
+          </div>
+          <p className="mt-2 text-[13px] text-[#93939f]">Montre-le au comptoir</p>
+        </section>
+      )}
+
       <div className="mt-6 overflow-hidden rounded-[22px] bg-[#eeece7]" style={{ aspectRatio: "4/3" }}>
         {reservation.plat_photo ? (
           <img src={reservation.plat_photo} alt="" className="h-full w-full object-cover" />
@@ -119,15 +129,6 @@ export default function EcranReservationEnCours({ me, reservation, onAnnulee }) 
         )}
       </section>
 
-      {!servie && (
-        <section className="mt-6 flex flex-col items-center">
-          <Libelle>Ton ticket</Libelle>
-          <div className="mt-3 rounded-[16px] border border-[#f2f2f2] bg-white p-4">
-            <QRCodeSVG value={reservation.ticket} size={220} level="M" />
-          </div>
-          <p className="mt-2 text-[13px] text-[#93939f]">Montre-le au comptoir</p>
-        </section>
-      )}
 
       {erreur && (
         <p role="alert" className="mt-6 bg-[#fff1f1] px-4 py-3 text-[14px] text-[#b30000]">

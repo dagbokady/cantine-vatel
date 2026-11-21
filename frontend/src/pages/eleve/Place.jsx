@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSalle, postReservation } from "../../api/eleve";
-import PlanSalle from "../../components/eleve/PlanSalle";
+import PlanSalle, { ChaiseIcone } from "../../components/eleve/PlanSalle";
 import { BackHeader, BottomCTA } from "../../components/ui";
 import { useReservation } from "../../hooks/useReservation";
 import { useI18n } from "../../utils/i18n";
+import { titreStyle } from "../../utils/tokens";
 
 const MSG_PLACE_PRISE = "Cette place vient d'être prise. Choisis-en une autre.";
 
@@ -40,6 +41,11 @@ export default function Place() {
   }, [toast]);
 
   if (!etat.plat || !etat.creneau) return null;
+
+  const places = salle ? salle.tables.flatMap((tb) => tb.places.map((p) => ({ ...p, table: tb.nom }))) : [];
+  const libres = places.filter((p) => p.etat !== "prise").length;
+  const placeSel = places.find((p) => p.id === etat.place?.id);
+  const basculer = (p) => choisirPlace(p.id === etat.place?.id ? null : p);
 
   const valider = async () => {
     if (!etat.place || envoi) return;
@@ -81,14 +87,23 @@ export default function Place() {
 
       <BackHeader titre="Choisis ta place" />
 
-      <main className="px-5 pt-4">
-        <div className="flex items-center gap-4 text-[12px] text-[#616161]">
-          <Legende couleur="#eeece7" label="Libre" />
-          <Legende couleur="#93939f" label="Prise" />
-          <Legende couleur="#003c33" label="Ta place" />
+      <main className="mx-auto max-w-[560px] px-5 pt-2">
+        {salle && salle.tables.length > 0 && (
+          <p className="text-[15px] text-[#717171]">
+            <span className="text-[28px] font-semibold text-[#222222]" style={titreStyle}>
+              {libres}
+            </span>{" "}
+            place{libres > 1 ? "s" : ""} disponible{libres > 1 ? "s" : ""} sur {places.length}
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[#717171]">
+          <Legende etat="libre" label="Disponible" />
+          <Legende etat="prise" label="Occupée" />
+          <Legende etat="sel" label="Ta place" />
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 rounded-[22px] bg-[#F7F7F7] p-2">
           {salle === null && !erreur && (
             <p className="py-10 text-center text-[14px] text-[#93939f]">Chargement du plan…</p>
           )}
@@ -96,26 +111,36 @@ export default function Place() {
             <p className="py-10 text-center text-[15px] text-[#616161]">{t("aucune_table")}</p>
           )}
           {salle && salle.tables.length > 0 && (
-            <PlanSalle salle={salle} placeSelId={etat.place?.id ?? null} onSelect={choisirPlace} />
+            <PlanSalle salle={salle} placeSelId={etat.place?.id ?? null} onSelect={basculer} />
           )}
         </div>
+
+        <p className="mt-4 min-h-[22px] text-[15px] text-[#717171]" aria-live="polite">
+          {placeSel ? (
+            <>
+              Ta place : <span className="font-medium text-[#222222]">Table {placeSel.table.replace(/^T/, "")} · place {placeSel.numero}</span>
+            </>
+          ) : (
+            salle && salle.tables.length > 0 && "Touche une chaise disponible pour la choisir."
+          )}
+        </p>
 
         {erreur && (
           <p className="mt-4 bg-[#fff1f1] px-4 py-3 text-[14px] text-[#b30000]">{erreur}</p>
         )}
       </main>
 
-      <BottomCTA variante="vert" onClick={valider} disabled={!etat.place || envoi}>
-        {envoi ? "Réservation…" : "Valider ma réservation"}
+      <BottomCTA onClick={valider} disabled={!etat.place || envoi}>
+        {envoi ? "Réservation…" : "Valider"}
       </BottomCTA>
     </div>
   );
 }
 
-function Legende({ couleur, label }) {
+function Legende({ etat, label }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className="h-3 w-3 rounded-full" style={{ background: couleur }} />
+      <ChaiseIcone etat={etat} />
       {label}
     </span>
   );
