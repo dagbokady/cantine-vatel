@@ -3,6 +3,8 @@
 import logging
 import smtplib
 import ssl
+
+import certifi
 from email.message import EmailMessage
 
 from ..config import settings
@@ -19,7 +21,7 @@ def envoyer(dest: str, sujet: str, texte: str, html: str | None = None) -> None:
     msg.set_content(texte)
     if html:
         msg.add_alternative(html, subtype="html")
-    ctx = ssl.create_default_context()
+    ctx = ssl.create_default_context(cafile=certifi.where())  # certificats fiables même sur le Python macOS
     try:
         if settings.smtp_ssl:
             with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, context=ctx, timeout=15) as s:

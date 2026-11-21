@@ -14,12 +14,17 @@ from .services.tickets import public_key_pem
 
 @asynccontextmanager
 async def lifespan(_app):
-    """Base d'allergènes et d'ingrédients toujours présente (ajouts seulement)."""
+    """Base d'allergènes et d'ingrédients toujours présente (ajouts seulement).
+    SEED_DEMO=true : données de démonstration si aucun compte n'existe (jamais d'effacement d'une base utilisée)."""
     from .db import SessionLocal
     from .referentiel import charger_referentiel
 
     try:
         with SessionLocal() as db:
+            if settings.seed_demo:
+                from .seed import charger_demo_si_vide
+
+                charger_demo_si_vide(db)
             charger_referentiel(db)
     except Exception as exc:  # base non migrée : l'API démarre quand même
         print(f"Référentiel non chargé : {exc}")

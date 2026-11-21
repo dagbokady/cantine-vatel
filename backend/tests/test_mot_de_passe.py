@@ -77,3 +77,4 @@ def test_envoi_smtp(monkeypatch):
     mail.envoyer("chef@demo.ci", "Réinitialisation", "texte", "<p>html</p>")
     assert traces["serveur"] == ("smtp.exemple.ci", 587) and traces["tls"] and traces["login"] == "compte"
     assert traces["msg"]["To"] == "chef@demo.ci" and traces["msg"].is_multipart()
+

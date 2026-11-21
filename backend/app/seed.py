@@ -676,6 +676,15 @@ def demo_eleves(db, awa, eleve2, parent_awa, plats_by_name, creneaux, places, me
     charger_referentiel(db)
 
 
+def charger_demo_si_vide(db: Session) -> bool:
+    """Charge la démonstration seulement si aucun compte n'existe : une base utilisée n'est jamais effacée."""
+    if db.scalars(select(User.id).limit(1)).first() is not None:
+        return False
+    run(db)
+    db.commit()
+    return True
+
+
 def main() -> None:
     with SessionLocal() as db:
         run(db)

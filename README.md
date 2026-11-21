@@ -403,6 +403,8 @@ Sur Android et ordinateur, le bouton **Installer l'application** de la page Déc
 
 Mot de passe commun du personnel et des parents : **`motdepasse`**. Connexion sur `/pro`.
 
+En ligne (Render), ces comptes sont créés automatiquement au démarrage de l'API grâce à la variable `SEED_DEMO=true`, à condition que la base ne contienne encore aucun compte. Une base déjà utilisée n'est jamais effacée.
+
 | Rôle | Identifiant | Ce qu'on y voit |
 |---|---|---|
 | Administration | `admin@demo.ci` | Tableau de bord, statistiques, paramètres |

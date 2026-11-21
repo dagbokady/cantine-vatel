@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     ticket_signing_key: str = ""
     # Comptoir : refuser un ticket hors de son créneau (désactivable pour une démo).
     comptoir_controle_creneau: bool = True
+    # Données de démonstration chargées au démarrage, uniquement si la base ne contient encore aucun compte.
+    seed_demo: bool = False
     # Fuseau de l'établissement (Côte d'Ivoire) : définit « aujourd'hui » côté serveur.
     fuseau_horaire: str = "Africa/Abidjan"
     # URL publique du frontend (liens dans les e-mails). Vide : première origine de CORS_ORIGINS.
