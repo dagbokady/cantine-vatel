@@ -17,7 +17,9 @@ import AjouterEnfant from "./pages/parent/AjouterEnfant";
 import Enfant from "./pages/parent/Enfant";
 import MenuSemaine from "./pages/parent/MenuSemaine";
 import Notifications from "./pages/parent/Notifications";
-import FicheCuisine from "./pages/cuisine/FicheCuisine";
+import Service from "./pages/cuisine/Service";
+import SalleCuisine from "./pages/cuisine/Salle";
+import Retours from "./pages/cuisine/Retours";
 import Menus from "./pages/cuisine/Menus";
 import Plats from "./pages/cuisine/Plats";
 import Ingredients from "./pages/cuisine/Ingredients";
@@ -25,6 +27,7 @@ import TableauDeBord from "./pages/admin/TableauDeBord";
 import Creneaux from "./pages/admin/Creneaux";
 import Salle from "./pages/admin/Salle";
 import Parametres from "./pages/admin/Parametres";
+import Portions from "./pages/admin/Portions";
 import Appel from "./pages/enseignant/Appel";
 
 const R = (roles, el) => <RequireAuth roles={roles}>{el}</RequireAuth>;
@@ -92,13 +95,16 @@ export default function App() {
                 <Route path="/parent/enfant/:id" element={R(["parent"], <Enfant />)} />
                 <Route path="/parent/menu" element={R(["parent"], <MenuSemaine />)} />
                 <Route path="/parent/notifications" element={R(["parent"], <Notifications />)} />
-                <Route path="/cuisine" element={R(["cuisine", "admin"], <FicheCuisine />)} />
+                <Route path="/cuisine" element={R(["cuisine", "admin"], <Service />)} />
+                <Route path="/cuisine/salle" element={R(["cuisine", "admin"], <SalleCuisine />)} />
+                <Route path="/cuisine/retours" element={R(["cuisine", "admin"], <Retours />)} />
                 <Route path="/cuisine/menus" element={R(["cuisine", "admin"], <Menus />)} />
                 <Route path="/cuisine/plats" element={R(["cuisine", "admin"], <Plats />)} />
                 <Route path="/cuisine/ingredients" element={R(["cuisine", "admin"], <Ingredients />)} />
                 <Route path="/admin" element={R(["admin"], <TableauDeBord />)} />
                 <Route path="/admin/creneaux" element={R(["admin"], <Creneaux />)} />
                 <Route path="/admin/salle" element={R(["admin"], <Salle />)} />
+                <Route path="/admin/portions" element={R(["admin"], <Portions />)} />
                 <Route path="/admin/parametres" element={R(["admin"], <Parametres />)} />
                 <Route path="/enseignant" element={R(["enseignant"], <Appel />)} />
                 <Route path="*" element={<Navigate to="/" replace />} />

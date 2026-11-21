@@ -1,5 +1,16 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  UtensilsCrossed,
+  ArrowRight,
+  ShieldCheck,
+  AlertCircle,
+  UserRound,
+  Mail,
+  LockKeyhole,
+} from "lucide-react";
+
 import { useAuth } from "../../hooks/useAuth";
 import { ACCUEIL_ROLE } from "../../utils/roles";
 import { titreStyle } from "../../utils/tokens";
@@ -8,50 +19,247 @@ import { Alerte, Bouton, Champ } from "../../components/EspaceLayout";
 export default function Connexion() {
   const { loginUser, inscrireParent } = useAuth();
   const navigate = useNavigate();
+
   const [inscription, setInscription] = useState(false);
-  const [f, setF] = useState({ nom: "", identifiant: "", mdp: "" });
+  const [f, setF] = useState({
+    nom: "",
+    identifiant: "",
+    mdp: "",
+  });
   const [erreur, setErreur] = useState("");
   const [envoi, setEnvoi] = useState(false);
-  const maj = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  const maj = (k) => (e) => {
+    setF((prev) => ({ ...prev, [k]: e.target.value }));
+    setErreur("");
+  };
 
   async function valider(e) {
     e.preventDefault();
     setErreur("");
     setEnvoi(true);
+
     try {
       const data = inscription
-        ? await inscrireParent(f.nom.trim(), f.identifiant.trim(), f.mdp)
-        : await loginUser(f.identifiant.trim(), f.mdp);
+          ? await inscrireParent(f.nom.trim(), f.identifiant.trim(), f.mdp)
+          : await loginUser(f.identifiant.trim(), f.mdp);
+
       navigate(ACCUEIL_ROLE[data.role] || "/", { replace: true });
     } catch (err) {
       const d = err.response?.data?.detail;
-      setErreur(typeof d === "string" ? d : inscription ? "Vérifie les champs (mot de passe : 6 caractères min.)." : "Connexion impossible.");
+
+      setErreur(
+          typeof d === "string"
+              ? d
+              : inscription
+                  ? "Vérifie les champs. Le mot de passe doit contenir au moins 6 caractères."
+                  : "Adresse e-mail ou mot de passe incorrect."
+      );
     } finally {
       setEnvoi(false);
     }
   }
 
+  function changerMode() {
+    setInscription((v) => !v);
+    setErreur("");
+  }
+
   return (
-    <div className="flex min-h-screen flex-col justify-center bg-white px-5 py-10">
-      <form onSubmit={valider} className="mx-auto w-full max-w-[400px] space-y-4">
-        <h1 className="text-center text-[32px] font-medium text-[#003c33]" style={titreStyle}>Cantine Vatel</h1>
-        <p className="pb-6 text-center text-[15px] text-[#616161]">
-          {inscription ? "Crée ton compte parent" : "Espace parents et personnel"}
-        </p>
-        {inscription && <Champ label="Nom complet" value={f.nom} onChange={maj("nom")} autoComplete="name" />}
-        <Champ label="E-mail" type="email" value={f.identifiant} onChange={maj("identifiant")} autoComplete="username" placeholder="nom@exemple.ci" />
-        <Champ label="Mot de passe" type="password" value={f.mdp} onChange={maj("mdp")} autoComplete={inscription ? "new-password" : "current-password"} />
-        <Bouton type="submit" className="mt-2 h-[52px] w-full" disabled={envoi || !f.identifiant || !f.mdp || (inscription && !f.nom)}>
-          {envoi ? "…" : inscription ? "Créer mon compte" : "Se connecter"}
-        </Bouton>
-        <Alerte>{erreur}</Alerte>
-        <div className="flex flex-col items-center gap-1 pt-2">
-          <button type="button" onClick={() => { setInscription(!inscription); setErreur(""); }} className="min-h-12 text-[13px] text-[#003c33] underline underline-offset-2">
-            {inscription ? "J'ai déjà un compte" : "Parent ? Crée ton compte"}
-          </button>
-          <Link to="/login" className="min-h-12 py-3 text-[13px] text-[#616161] underline underline-offset-2">Je suis élève</Link>
-        </div>
-      </form>
-    </div>
+      <main className="min-h-screen bg-white lg:grid lg:grid-cols-2">
+
+        {/* PANNEAU VISUEL DESKTOP */}
+        <section className="relative hidden min-h-screen overflow-hidden bg-[#FFF0ED] p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
+
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FF5A5F] text-white">
+              <UtensilsCrossed size={23} />
+            </div>
+            <span className="text-xl font-semibold text-[#222222]">
+            Cantine Vatel
+          </span>
+          </div>
+
+          <div className="relative z-10 max-w-lg">
+          <span className="inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[#FF5A5F]">
+            Espace professionnel
+          </span>
+
+            <h2
+                className="mt-7 text-5xl font-semibold leading-[1.12] tracking-tight text-[#222222] xl:text-6xl"
+                style={titreStyle}
+            >
+              Une cantine
+              <br />
+              mieux organisée.
+            </h2>
+
+            <p className="mt-6 max-w-md text-lg leading-8 text-[#717171]">
+              Retrouvez tous vos outils pour accompagner les élèves,
+              suivre les repas et simplifier la gestion quotidienne.
+            </p>
+
+            <div className="mt-12 rounded-[28px] bg-white p-7 shadow-xl shadow-[#222222]/5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF0ED] text-[#FF5A5F]">
+                  <ShieldCheck size={28} />
+                </div>
+                <div>
+                  <p className="font-semibold text-[#222222]">
+                    Un espace sécurisé
+                  </p>
+                  <p className="mt-1 text-sm text-[#717171]">
+                    Vos informations restent protégées.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="relative z-10 text-xs text-[#717171]">
+            © 2026 Cantine Vatel · Tous droits réservés
+          </p>
+
+          <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full border-[50px] border-white/40" />
+          <div className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-[#FF5A5F]/10" />
+        </section>
+
+        {/* FORMULAIRE */}
+        <section className="flex min-h-screen items-center justify-center px-6 py-12 sm:px-10">
+          <div className="w-full max-w-[420px]">
+
+            {/* LOGO MOBILE */}
+            <div className="mb-12 lg:hidden">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FF5A5F] text-white">
+                <UtensilsCrossed size={28} />
+              </div>
+
+              <h1
+                  className="mt-4 text-center text-3xl font-semibold text-[#222222]"
+                  style={titreStyle}
+              >
+                Cantine Vatel
+              </h1>
+            </div>
+
+            <div className="mb-9">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF5A5F]">
+              {inscription ? "Nouvel espace parent" : "Espace parents & personnel"}
+            </span>
+
+              <h1
+                  className="mt-3 text-3xl font-semibold tracking-tight text-[#222222] sm:text-4xl"
+                  style={titreStyle}
+              >
+                {inscription ? "Bienvenue !" : "Ravi de vous revoir."}
+              </h1>
+
+              <p className="mt-3 text-[15px] leading-6 text-[#717171]">
+                {inscription
+                    ? "Créez votre compte pour suivre les repas et accompagner vos enfants."
+                    : "Connectez-vous pour accéder à votre espace personnel."}
+              </p>
+            </div>
+
+            <form onSubmit={valider} className="space-y-5">
+
+              {inscription && (
+                  <div>
+                    <Champ
+                        label="Nom complet"
+                        value={f.nom}
+                        onChange={maj("nom")}
+                        autoComplete="name"
+                        placeholder="Votre nom et prénom"
+                    />
+                  </div>
+              )}
+
+              <div>
+                <Champ
+                    label="Adresse e-mail"
+                    type="email"
+                    value={f.identifiant}
+                    onChange={maj("identifiant")}
+                    autoComplete="username"
+                    placeholder="nom@exemple.ci"
+                />
+              </div>
+
+              <div>
+                <Champ
+                    label="Mot de passe"
+                    type="password"
+                    value={f.mdp}
+                    onChange={maj("mdp")}
+                    autoComplete={inscription ? "new-password" : "current-password"}
+                    placeholder="Votre mot de passe"
+                />
+
+                {inscription && (
+                    <p className="mt-2 text-xs text-[#B0B0B0]">
+                      6 caractères minimum.
+                    </p>
+                )}
+              </div>
+
+              {erreur && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-[#B30000]/10 bg-[#FFF0ED] p-4 text-sm text-[#B30000]">
+                    <AlertCircle size={19} className="mt-0.5 shrink-0" />
+                    <p>{erreur}</p>
+                  </div>
+              )}
+
+              <Bouton
+                  type="submit"
+                  className="group mt-3 flex h-[54px] w-full items-center justify-center gap-3 rounded-full"
+                  disabled={
+                      envoi ||
+                      !f.identifiant.trim() ||
+                      !f.mdp ||
+                      (inscription && !f.nom.trim())
+                  }
+              >
+                {envoi
+                    ? "Veuillez patienter..."
+                    : inscription
+                        ? "Créer mon compte"
+                        : "Se connecter"}
+
+                {!envoi && <ArrowRight size={19} />}
+              </Bouton>
+
+              <button
+                  type="button"
+                  onClick={changerMode}
+                  className="w-full py-3 text-sm font-medium text-[#717171] transition-colors hover:text-[#FF5A5F]"
+              >
+                {inscription
+                    ? "J'ai déjà un compte ? Me connecter"
+                    : "Parent ? Créer un compte"}
+              </button>
+            </form>
+
+            <div className="my-8 flex items-center gap-3">
+              <div className="h-px flex-1 bg-[#EBEBEB]" />
+              <span className="text-xs text-[#B0B0B0]">OU</span>
+              <div className="h-px flex-1 bg-[#EBEBEB]" />
+            </div>
+
+            <Link
+                to="/login"
+                className="flex min-h-14 items-center justify-center gap-3 rounded-full border border-[#EBEBEB] text-sm font-medium text-[#222222] transition-all hover:border-[#222222] hover:bg-[#F7F7F7]"
+            >
+              <UserRound size={18} />
+              Je suis élève
+              <ArrowRight size={17} className="text-[#FF5A5F]" />
+            </Link>
+
+            <p className="mt-8 text-center text-xs text-[#B0B0B0]">
+              Un accès sécurisé à votre espace Cantine Vatel.
+            </p>
+          </div>
+        </section>
+      </main>
   );
 }

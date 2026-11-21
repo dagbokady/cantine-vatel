@@ -21,6 +21,7 @@ from ..models import (
     Reservation,
     User,
 )
+from ..services import service_cuisine as sc
 from ..services.cuisine import fiche_cuisine, impact_allergenes
 from ..services.eleve import _allergenes_par_plat, _ingredients_par_plat
 
@@ -222,3 +223,45 @@ def supprimer_menu(menu_id: int, _: User = Depends(cuisine), db: Session = Depen
 @router.get("/fiche")
 def fiche(date: _date | None = None, _: User = Depends(cuisine), db: Session = Depends(get_db)):
     return fiche_cuisine(db, date or _date.today())
+
+
+# ---------- Espace cuisinier : service, vagues, salle, retours ----------
+
+
+class RetourIn(BaseModel):
+    eleve_id: int
+    avis: int | None = Field(default=None, ge=-1, le=1)
+    consommation: str | None = Field(default=None, pattern="^(termine|non_termine)$")
+
+
+class RetoursIn(BaseModel):
+    date: _date
+    mode: str | None = None
+    retours: list[RetourIn] = Field(min_length=1, max_length=200)
+
+
+@router.get("/service")
+def get_service(date: _date | None = None, mode: str | None = None, user: User = Depends(cuisine), db: Session = Depends(get_db)):
+    return sc.service(db, user, date or _date.today(), mode)
+
+
+@router.get("/vagues/{cle}")
+def get_vague(cle: str, date: _date | None = None, mode: str | None = None, user: User = Depends(cuisine), db: Session = Depends(get_db)):
+    return sc.vague(db, user, date or _date.today(), cle, mode)
+
+
+@router.get("/salle")
+def get_salle(date: _date | None = None, vague: str | None = None, mode: str | None = None, user: User = Depends(cuisine), db: Session = Depends(get_db)):
+    return sc.salle(db, user, date or _date.today(), vague, mode)
+
+
+@router.put("/retours")
+def put_retours(body: RetoursIn, user: User = Depends(cuisine), db: Session = Depends(get_db)):
+    out = sc.enregistrer_retours(db, user, body.date, body.retours, body.mode)
+    db.commit()
+    return out
+
+
+@router.get("/eleves/{eleve_id}/stats")
+def get_stats(eleve_id: int, _: User = Depends(cuisine), db: Session = Depends(get_db)):
+    return sc.stats_eleve(db, eleve_id)

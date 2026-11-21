@@ -7,7 +7,23 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..deps import get_db, require_roles
-from ..models import Creneau, Niveau, Parametres, Place, Reservation, TableSalle, User
+from datetime import datetime
+
+from ..models import (
+    AffectationCuisine,
+    Classe,
+    ClasseTable,
+    Creneau,
+    Eleve,
+    Niveau,
+    Parametres,
+    Place,
+    Reservation,
+    SuggestionPortion,
+    TableSalle,
+    User,
+)
+from ..services.service_cuisine import suggestion_out
 from ..services.dashboard import tableau_de_bord
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -68,6 +84,16 @@ def put_niveau(niveau_id: int, body: NiveauIn, _: User = Depends(admin), db: Ses
     n = db.get(Niveau, niveau_id)
     if n is None:
         raise HTTPException(status_code=404, detail="Niveau introuvable.")
+    if body.mode != n.mode:
+        cuisiniers = db.scalars(select(AffectationCuisine.user_id).where(AffectationCuisine.niveau_id == n.id)).all()
+        for uid in cuisiniers:
+            autres = db.scalars(
+                select(Niveau.mode)
+                .join(AffectationCuisine, AffectationCuisine.niveau_id == Niveau.id)
+                .where(AffectationCuisine.user_id == uid, Niveau.id != n.id)
+            ).all()
+            if any(m != body.mode for m in autres):
+                raise HTTPException(status_code=409, detail="Un cuisinier affecté à ce niveau mélangerait les deux modes.")
     n.mode = body.mode
     db.commit()
     return {"id": n.id, "nom": n.nom, "mode": n.mode}
@@ -171,3 +197,110 @@ def dashboard(date: _date | None = None, _: User = Depends(admin), db: Session =
     return tableau_de_bord(db, date or _date.today())
 
 
+
+
+# ---------- Cuisiniers : affectation aux niveaux (un seul mode par cuisinier) ----------
+
+
+class AffectationIn(BaseModel):
+    niveau_ids: list[int]
+
+
+def _cuisinier_out(db: Session, u: User) -> dict:
+    niveaux = db.scalars(
+        select(Niveau).join(AffectationCuisine, AffectationCuisine.niveau_id == Niveau.id).where(AffectationCuisine.user_id == u.id)
+    ).all()
+    return {"id": u.id, "nom": u.nom, "identifiant": u.identifiant, "niveaux": [{"id": n.id, "nom": n.nom, "mode": n.mode} for n in niveaux]}
+
+
+@router.get("/cuisiniers")
+def cuisiniers(_: User = Depends(admin), db: Session = Depends(get_db)):
+    return [_cuisinier_out(db, u) for u in db.scalars(select(User).where(User.role == "cuisine").order_by(User.nom))]
+
+
+@router.put("/cuisiniers/{user_id}")
+def affecter_cuisinier(user_id: int, body: AffectationIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    u = db.get(User, user_id)
+    if u is None or u.role != "cuisine":
+        raise HTTPException(status_code=404, detail="Cuisinier introuvable.")
+    niveaux = db.scalars(select(Niveau).where(Niveau.id.in_(body.niveau_ids))).all()
+    if len(niveaux) != len(set(body.niveau_ids)):
+        raise HTTPException(status_code=422, detail="Niveau inconnu.")
+    if len({n.mode for n in niveaux}) > 1:
+        raise HTTPException(status_code=409, detail="Un cuisinier ne peut pas travailler en mode classe et en mode commande à la fois.")
+    db.execute(delete(AffectationCuisine).where(AffectationCuisine.user_id == u.id))
+    for n in niveaux:
+        db.add(AffectationCuisine(user_id=u.id, niveau_id=n.id))
+    db.commit()
+    return _cuisinier_out(db, u)
+
+
+# ---------- Classes en mode classe : heure de passage et tables ----------
+
+
+class PlacementIn(BaseModel):
+    heure_passage: time | None = None
+    table_ids: list[int] = []
+
+
+def _classe_out(db: Session, c: Classe) -> dict:
+    tables = db.scalars(select(ClasseTable.table_id).where(ClasseTable.classe_id == c.id)).all()
+    effectif = db.scalar(select(func.count(Eleve.id)).where(Eleve.classe == c.nom)) or 0
+    return {"id": c.id, "nom": c.nom, "heure_passage": c.heure_passage, "table_ids": list(tables), "effectif": effectif}
+
+
+@router.get("/classes")
+def classes_mode_classe(_: User = Depends(admin), db: Session = Depends(get_db)):
+    rows = db.scalars(
+        select(Classe).join(Niveau, Niveau.id == Classe.niveau_id).where(Niveau.mode == "classe").order_by(Classe.heure_passage, Classe.nom)
+    )
+    return [_classe_out(db, c) for c in rows]
+
+
+@router.put("/classes/{classe_id}")
+def placer_classe(classe_id: int, body: PlacementIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    c = db.get(Classe, classe_id)
+    if c is None:
+        raise HTTPException(status_code=404, detail="Classe introuvable.")
+    if len(db.scalars(select(TableSalle.id).where(TableSalle.id.in_(body.table_ids))).all()) != len(set(body.table_ids)):
+        raise HTTPException(status_code=422, detail="Table inconnue.")
+    c.heure_passage = body.heure_passage
+    db.execute(delete(ClasseTable).where(ClasseTable.classe_id == c.id))
+    for tid in set(body.table_ids):
+        db.add(ClasseTable(classe_id=c.id, table_id=tid))
+    db.commit()
+    return _classe_out(db, c)
+
+
+# ---------- Suggestions de portion : validation humaine ----------
+
+
+class DecisionIn(BaseModel):
+    decision: str = Field(pattern="^(valider|refuser)$")
+
+
+@router.get("/suggestions-portion")
+def suggestions(_: User = Depends(admin), db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(SuggestionPortion, Eleve)
+        .join(Eleve, Eleve.id == SuggestionPortion.eleve_id)
+        .where(SuggestionPortion.statut == "proposee")
+        .order_by(SuggestionPortion.created_at)
+    ).all()
+    return [suggestion_out(s, e) for s, e in rows]
+
+
+@router.post("/suggestions-portion/{sid}")
+def decider(sid: int, body: DecisionIn, user: User = Depends(admin), db: Session = Depends(get_db)):
+    s = db.execute(select(SuggestionPortion).where(SuggestionPortion.id == sid).with_for_update()).scalar_one_or_none()
+    if s is None or s.statut != "proposee":
+        raise HTTPException(status_code=404, detail="Suggestion déjà traitée ou introuvable.")
+    e = db.get(Eleve, s.eleve_id)
+    if body.decision == "valider":
+        e.portion_defaut = s.portion_suggeree
+        s.statut = "validee"
+    else:
+        s.statut = "refusee"
+    s.traite_par, s.traite_a = user.id, datetime.now().astimezone()
+    db.commit()
+    return suggestion_out(s, e)

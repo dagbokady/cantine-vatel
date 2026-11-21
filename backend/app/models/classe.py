@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey, String
+from datetime import time as _time
+
+from sqlalchemy import ForeignKey, String, Time
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -21,3 +23,4 @@ class Classe(Base):
     enseignant_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    heure_passage: Mapped[_time | None] = mapped_column(Time, nullable=True)  # mode classe : vague

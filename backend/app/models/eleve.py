@@ -19,6 +19,7 @@ class Eleve(Base):
     regime: Mapped[str | None] = mapped_column(String(80), nullable=True)
     allergies: Mapped[list[str]] = mapped_column(ARRAY(String), server_default="{}")
     solde: Mapped[int] = mapped_column(Integer, default=0)  # FCFA
+    portion_defaut: Mapped[int] = mapped_column(Integer, default=3, server_default="3")  # tiers
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

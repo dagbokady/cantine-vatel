@@ -16,8 +16,12 @@ from sqlalchemy.orm import Session
 
 from .db import SessionLocal, engine
 from .models import (
+    AffectationCuisine,
     Allergene,
     Appel,
+    ClasseTable,
+    Repas,
+    SuggestionPortion,
     Classe,
     Niveau,
     Notification,
@@ -169,6 +173,8 @@ PLATS_SEMAINE = [
     ),
 ]
 
+NOMS_CM1 = ["Yasmine Ouattara", "Kevin Brou", "Grâce Kassi", "Ismaël Sanogo", "Prisca Zadi", "Ange Dosso", "Nadia Coulibaly", "Fabrice Assi"]
+
 NOMS_PRIMAIRE = [
     "Inès Koffi", "Junior Kouamé", "Aïcha Diabaté", "Samuel Yapi", "Océane Gbagbo",
     "Hamed Bamba", "Lucie N'Goran", "Mohamed Koné", "Divine Aka", "Emmanuel Tra",
@@ -191,6 +197,10 @@ def arrondi_25(n: float) -> int:
 
 def run(db: Session) -> None:
     # Nettoyage dans l'ordre des dépendances
+    db.execute(delete(SuggestionPortion))
+    db.execute(delete(Repas))
+    db.execute(delete(ClasseTable))
+    db.execute(delete(AffectationCuisine))
     db.execute(delete(Presence))
     db.execute(delete(Appel))
     db.execute(delete(Notification))
@@ -352,10 +362,22 @@ def run(db: Session) -> None:
     niv_lycee = Niveau(nom="Lycée", mode="commande")
     db.add_all([niv_primaire, niv_college, niv_lycee])
     db.flush()
-    db.add(Classe(nom="CM2 A", niveau_id=niv_primaire.id, enseignant_id=comptes["enseignant"].id))
+    cm2 = Classe(nom="CM2 A", niveau_id=niv_primaire.id, enseignant_id=comptes["enseignant"].id, heure_passage=time(11, 45))
+    cm1 = Classe(nom="CM1 B", niveau_id=niv_primaire.id, heure_passage=time(11, 30))
+    db.add_all([cm2, cm1])
     for c in CLASSES:
         db.add(Classe(nom=c, niveau_id=niv_lycee.id))
     db.flush()
+
+    # Deux cuisiniers : l'un en mode commande (collège, lycée), l'autre en mode classe (primaire)
+    cheffe = User(nom="Cheffe Adjoua", identifiant="cuisine.primaire@demo.ci", secret_hash=_hasher.hash("motdepasse"), role="cuisine")
+    db.add(cheffe)
+    db.flush()
+    db.add_all([
+        AffectationCuisine(user_id=comptes["cuisine"].id, niveau_id=niv_college.id),
+        AffectationCuisine(user_id=comptes["cuisine"].id, niveau_id=niv_lycee.id),
+        AffectationCuisine(user_id=cheffe.id, niveau_id=niv_primaire.id),
+    ])
 
     # Un parent de démo pour Awa
     parent_awa = User(
@@ -430,7 +452,45 @@ def run(db: Session) -> None:
                 parent_id=None,
             )
         )
+    for idx, nom in enumerate(NOMS_CM1, start=1):
+        db.add(
+            Eleve(
+                matricule=f"PRI-2026-1{idx:02d}",
+                nom=nom,
+                classe="CM1 B",
+                pin_hash=None,
+                allergies=["poisson"] if idx == 3 else [],
+                regime="sans porc" if idx in (4, 6) else None,
+                solde=0,
+            )
+        )
     db.flush()
+
+    # Mode classe : tables réservées (CM1 B en T5-T6, CM2 A en T7-T8)
+    for cl, noms in ((cm1, ("T5", "T6")), (cm2, ("T7", "T8"))):
+        for t in tables:
+            if t.nom in noms:
+                db.add(ClasseTable(classe_id=cl.id, table_id=t.id))
+
+    # Historique de retours d'assiettes du primaire (3 semaines) pour alimenter les statistiques
+    profils = {"Junior Kouamé": 0.95, "Divine Aka": 0.15, "Kevin Brou": 0.2}
+    for e in db.scalars(select(Eleve).where(Eleve.classe.in_(["CM2 A", "CM1 B"]))):
+        p_fini = profils.get(e.nom, 0.7)
+        if e.nom == "Junior Kouamé":
+            e.portion_defaut = 2
+        for k in range(1, 22):
+            jour = today - timedelta(days=k)
+            if jour.weekday() >= 5:
+                continue
+            db.add(Repas(
+                eleve_id=e.id, date=jour, tiers=e.portion_defaut or 3,
+                consommation="termine" if rnd.random() < p_fini else "non_termine",
+                avis=1 if rnd.random() < 0.75 else -1,
+            ))
+    db.flush()
+    from .services.service_cuisine import recalculer_suggestion
+    for e in db.scalars(select(Eleve).where(Eleve.classe.in_(["CM2 A", "CM1 B"]))):
+        recalculer_suggestion(db, e)
 
     # Réservations de démo : ~18 élèves commandent, pour remplir quelques places
     menu_principal = menu_by_type["Attiéké poisson braisé"]
@@ -491,7 +551,7 @@ def run(db: Session) -> None:
     n_eleves = db.scalar(select(func.count(Eleve.id)))
     n_res = db.scalar(select(func.count(Reservation.id)))
     print(f"Seed OK : {n_eleves} élèves, {n_res} réservations.")
-    print("Comptes (mot de passe : motdepasse) : " + ", ".join(c[1] for c in COMPTES) + ", parent.awa@demo.ci, parent.kouadio@demo.ci")
+    print("Comptes (mot de passe : motdepasse) : " + ", ".join(c[1] for c in COMPTES) + ", cuisine.primaire@demo.ci, parent.awa@demo.ci, parent.kouadio@demo.ci")
 
 
 def demo_eleves(db, awa, eleve2, parent_awa, plats_by_name, creneaux, places, menu_by_type, occupees, today):

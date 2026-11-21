@@ -35,6 +35,11 @@ export const creerPlat = (body) => post("/cuisine/plats", body);
 export const getIngredients = () => get("/cuisine/ingredients");
 export const creerIngredient = (body) => post("/cuisine/ingredients", body);
 export const getAllergenesCuisine = () => get("/cuisine/allergenes");
+export const getService = (date, mode) => get("/cuisine/service", { date, mode });
+export const getVague = (cle, date, mode) => get(`/cuisine/vagues/${cle}`, { date, mode });
+export const getSalleCuisine = (date, vague, mode) => get("/cuisine/salle", { date, vague, mode });
+export const envoyerRetours = (date, retours, mode) => put("/cuisine/retours", { date, retours, mode });
+export const getStatsEleve = (id) => get(`/cuisine/eleves/${id}/stats`);
 
 // Admin
 export const getDashboard = (date) => get("/admin/dashboard", date ? { date } : undefined);
@@ -50,6 +55,12 @@ export const getSalleAdmin = () => get("/admin/salle");
 export const creerTable = (body) => post("/admin/tables", body);
 export const supprimerTable = (id) => del(`/admin/tables/${id}`);
 export const majPlace = (id, pmr) => put(`/admin/places/${id}`, { pmr });
+export const getCuisiniers = () => get("/admin/cuisiniers");
+export const affecterCuisinier = (id, niveau_ids) => put(`/admin/cuisiniers/${id}`, { niveau_ids });
+export const getClassesModeClasse = () => get("/admin/classes");
+export const placerClasse = (id, body) => put(`/admin/classes/${id}`, body);
+export const getSuggestionsPortion = () => get("/admin/suggestions-portion");
+export const deciderSuggestion = (id, decision) => post(`/admin/suggestions-portion/${id}`, { decision });
 
 // Enseignant
 export const getClassesEnseignant = () => get("/enseignant/classes");

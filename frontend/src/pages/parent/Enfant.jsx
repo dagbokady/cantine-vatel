@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { activerAcces, getAllergenes, getEnfants, getHistoriqueEnfant, majAllergies, recharger } from "../../api/pro";
+import { Pencil } from "lucide-react";
 import EspaceLayout, { Alerte, Bouton } from "../../components/EspaceLayout";
+import Panneau, { BoutonAction } from "../../components/Panneau";
 import { Avatar } from "../../components/ui";
 import { fcfa, tiersEnFraction } from "../../utils/format";
 import { titreStyle } from "../../utils/tokens";
@@ -30,6 +32,7 @@ export default function Enfant() {
   const [montant, setMontant] = useState(2000);
   const [msg, setMsg] = useState({ texte: "", ok: true });
   const [envoi, setEnvoi] = useState(false);
+  const [edition, setEdition] = useState(false);
 
   const charger = useCallback(async () => {
     const [liste, h] = await Promise.all([getEnfants(), getHistoriqueEnfant(id)]);
@@ -52,6 +55,7 @@ export default function Enfant() {
       await fn();
       await charger();
       setMsg({ texte: succes, ok: true });
+      setEdition(false);
     } catch (e) {
       setMsg({ texte: e.response?.data?.detail || "Action impossible.", ok: false });
     } finally {
@@ -93,25 +97,17 @@ export default function Enfant() {
       <div className="mt-4"><Alerte ok={msg.ok}>{msg.texte}</Alerte></div>
 
       <Section titre="Allergies et régime" className="mt-4">
-        <p className="-mt-2 mb-4 text-[14px] text-[#717171]">Toi seul peux les modifier. Les plats concernés ne seront ni proposés ni servis.</p>
-        <div className="flex flex-wrap gap-2">
-          {tous.map((a) => {
-            const actif = allergies.includes(a);
-            return (
-              <button key={a} type="button" aria-pressed={actif}
-                onClick={() => setAllergies(actif ? allergies.filter((x) => x !== a) : [...allergies, a].sort())}
-                className={`h-10 rounded-full border px-4 text-[14px] transition-colors ${actif ? "border-[#FF5A5F] bg-[#FFF0ED] font-medium text-[#222222]" : "border-[#EBEBEB] bg-white text-[#717171] hover:border-[#222222]"}`}>
-                {a.charAt(0).toUpperCase() + a.slice(1)}
-              </button>
-            );
-          })}
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap gap-2">
+              {enfant.allergies.length ? enfant.allergies.map((a) => (
+                <span key={a} className="rounded-full border border-[#FF5A5F] bg-[#FFF0ED] px-4 py-2 text-[14px] font-medium text-[#222222]">{a.charAt(0).toUpperCase() + a.slice(1)}</span>
+              )) : <span className="text-[14px] text-[#717171]">Aucune allergie déclarée</span>}
+            </div>
+            <p className="mt-3 text-[14px] text-[#717171]">Régime : <span className="text-[#222222]">{enfant.regime || "aucun"}</span></p>
+          </div>
+          <BoutonAction variante="doux" icone={Pencil} onClick={() => { setAllergies(enfant.allergies); setRegime(enfant.regime || ""); setEdition(true); }}>Modifier</BoutonAction>
         </div>
-        <input value={regime} onChange={(e) => setRegime(e.target.value)} placeholder="Régime (ex. sans porc, végétarien)"
-          className="mt-4 h-12 w-full rounded-[12px] border border-[#EBEBEB] px-4 text-[15px] outline-none placeholder:text-[#B0B0B0] focus:border-[#222222]" />
-        <Bouton className="mt-3 w-full" disabled={!modifie || envoi}
-          onClick={() => action(() => majAllergies(enfant.id, allergies, regime), "Allergies enregistrées.")}>
-          Enregistrer
-        </Bouton>
       </Section>
 
       <Section titre="Repas">
@@ -162,6 +158,31 @@ export default function Enfant() {
           </Bouton>
         </div>
       </Section>
+      <Panneau ouvert={edition} onClose={() => setEdition(false)} titre="Allergies et régime" surTitre={enfant.nom}
+        pied={
+          <Bouton className="w-full" disabled={!modifie || envoi}
+            onClick={() => action(() => majAllergies(enfant.id, allergies, regime), "Allergies enregistrées.")}>
+            Enregistrer
+          </Bouton>
+        }>
+        <p className="text-[14px] text-[#717171]">Toi seul peux les modifier. Les plats concernés ne seront ni proposés ni servis.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {tous.map((a) => {
+            const actif = allergies.includes(a);
+            return (
+              <button key={a} type="button" aria-pressed={actif}
+                onClick={() => setAllergies(actif ? allergies.filter((x) => x !== a) : [...allergies, a].sort())}
+                className={`h-10 rounded-full border px-4 text-[14px] transition-colors ${actif ? "border-[#FF5A5F] bg-[#FFF0ED] font-medium text-[#222222]" : "border-[#EBEBEB] bg-white text-[#717171] hover:border-[#222222]"}`}>
+                {a.charAt(0).toUpperCase() + a.slice(1)}
+              </button>
+            );
+          })}
+        </div>
+        <label className="mt-5 block text-[13px] font-medium">Régime
+          <input value={regime} onChange={(e) => setRegime(e.target.value)} placeholder="ex. sans porc, végétarien"
+            className="mt-1.5 h-12 w-full rounded-[12px] border border-[#EBEBEB] px-4 text-[16px] outline-none placeholder:text-[#B0B0B0] focus:border-[#222222]" />
+        </label>
+      </Panneau>
     </EspaceLayout>
   );
 }

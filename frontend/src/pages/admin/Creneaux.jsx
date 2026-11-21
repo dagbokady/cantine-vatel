@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { creerCreneau, erreurApi, getCreneauxAdmin, majCreneau, supprimerCreneau } from "../../api/pro";
-import EspaceLayout, { Alerte, Bouton, Carte } from "../../components/EspaceLayout";
-import { Libelle } from "../../components/ui";
+import EspaceLayout, { Alerte, Bouton } from "../../components/EspaceLayout";
+import Panneau, { BoutonAction } from "../../components/Panneau";
 import { titreStyle } from "../../utils/tokens";
 import { ONGLETS_ADMIN } from "./onglets";
 import ChampDate from "./ChampDate";
@@ -15,20 +15,28 @@ export default function Creneaux() {
   const [liste, setListe] = useState([]);
   const [f, setF] = useState({ heure_debut: "12:00", heure_fin: "12:20", capacite: 24 });
   const [msg, setMsg] = useState({ texte: "", ok: true });
+  const [edition, setEdition] = useState(null); // "nouveau" | créneau
+  const [capacite, setCapacite] = useState(0);
 
   const charger = useCallback(() => getCreneauxAdmin(date).then(setListe), [date]);
   useEffect(() => { charger(); }, [charger]);
   const faire = async (fn, ok) => {
-    try { await fn(); await charger(); setMsg({ texte: ok, ok: true }); } catch (e) { setMsg({ texte: erreurApi(e), ok: false }); }
+    try { await fn(); await charger(); setMsg({ texte: ok, ok: true }); setEdition(null); } catch (e) { setMsg({ texte: erreurApi(e), ok: false }); }
   };
 
   return (
     <EspaceLayout titre="Créneaux" surTitre="Horaires et capacités" onglets={ONGLETS_ADMIN} large
-      action={<ChampDate value={date} onChange={setDate} />}>
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <section className="order-2 lg:order-1">
+      action={
+        <div className="flex flex-wrap items-center gap-2">
+          <ChampDate value={date} onChange={setDate} />
+          <BoutonAction icone={Plus} onClick={() => setEdition("nouveau")}>Nouveau créneau</BoutonAction>
+        </div>
+      }>
+      <div className="mb-4"><Alerte ok={msg.ok}>{msg.texte}</Alerte></div>
+      <div>
+        <section>
           {liste.length === 0 && <p className="rounded-[22px] bg-[#F7F7F7] px-5 py-10 text-center text-[15px] text-[#717171]">Aucun créneau ce jour.</p>}
-          <ul className="space-y-3">
+          <ul className="grid gap-3 lg:grid-cols-2">
             {liste.map((c) => {
               const pct = c.capacite ? Math.min(100, (100 * c.commandes) / c.capacite) : 0;
               return (
@@ -48,12 +56,8 @@ export default function Creneaux() {
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#F7F7F7]">
                       <div className={`h-full rounded-full ${pct >= 100 ? "bg-[#B30000]" : "bg-[#FF5A5F]"}`} style={{ width: `${pct}%` }} />
                     </div>
-                    <label className="flex items-center gap-2 text-[13px] text-[#717171]">
-                      Capacité
-                      <input type="number" min={1} defaultValue={c.capacite} aria-label="Capacité"
-                        className="h-10 w-20 rounded-[10px] border border-[#EBEBEB] px-3 text-[15px] text-[#222222] outline-none focus:border-[#222222]"
-                        onBlur={(e) => Number(e.target.value) !== c.capacite && faire(() => majCreneau(c.id, { date, heure_debut: hm(c.heure_debut), heure_fin: hm(c.heure_fin), capacite: Number(e.target.value) }), "Capacité mise à jour.")} />
-                    </label>
+                    <BoutonAction variante="doux" icone={Pencil} label={`Modifier la capacité du créneau ${hm(c.heure_debut)}`}
+                      onClick={() => { setCapacite(c.capacite); setEdition(c); }} />
                   </div>
                 </li>
               );
@@ -61,25 +65,36 @@ export default function Creneaux() {
           </ul>
         </section>
 
-        <aside className="order-1 lg:order-2">
-          <Carte className="bg-[#F7F7F7] border-transparent lg:sticky lg:top-32">
-            <Libelle>Nouveau créneau</Libelle>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <label className="text-[13px] font-medium">Début
-                <input type="time" className={`${champ} mt-1.5`} value={f.heure_debut} onChange={(e) => setF({ ...f, heure_debut: e.target.value })} />
-              </label>
-              <label className="text-[13px] font-medium">Fin
-                <input type="time" className={`${champ} mt-1.5`} value={f.heure_fin} onChange={(e) => setF({ ...f, heure_fin: e.target.value })} />
-              </label>
-              <label className="col-span-2 text-[13px] font-medium">Capacité (couverts)
-                <input type="number" min={1} className={`${champ} mt-1.5`} value={f.capacite} onChange={(e) => setF({ ...f, capacite: Number(e.target.value) })} />
-              </label>
-            </div>
-            <Bouton className="mt-4 w-full" onClick={() => faire(() => creerCreneau({ date, ...f }), "Créneau ajouté.")}>Ajouter le créneau</Bouton>
-            <div className="mt-3"><Alerte ok={msg.ok}>{msg.texte}</Alerte></div>
-          </Carte>
-        </aside>
       </div>
+
+      <Panneau ouvert={edition === "nouveau"} onClose={() => setEdition(null)} titre="Nouveau créneau" surTitre="Ajouter"
+        pied={<Bouton className="w-full" onClick={() => faire(() => creerCreneau({ date, ...f }), "Créneau ajouté.")}>Ajouter le créneau</Bouton>}>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-[13px] font-medium">Début
+            <input type="time" className={`${champ} mt-1.5`} value={f.heure_debut} onChange={(e) => setF({ ...f, heure_debut: e.target.value })} />
+          </label>
+          <label className="text-[13px] font-medium">Fin
+            <input type="time" className={`${champ} mt-1.5`} value={f.heure_fin} onChange={(e) => setF({ ...f, heure_fin: e.target.value })} />
+          </label>
+          <label className="col-span-2 text-[13px] font-medium">Capacité (couverts)
+            <input type="number" min={1} className={`${champ} mt-1.5`} value={f.capacite} onChange={(e) => setF({ ...f, capacite: Number(e.target.value) })} />
+          </label>
+        </div>
+      </Panneau>
+
+      <Panneau ouvert={!!edition && edition !== "nouveau"} onClose={() => setEdition(null)} surTitre="Modifier"
+        titre={edition && edition !== "nouveau" ? `${hm(edition.heure_debut)} → ${hm(edition.heure_fin)}` : ""}
+        pied={
+          <Bouton className="w-full" disabled={capacite < 1}
+            onClick={() => faire(() => majCreneau(edition.id, { date, heure_debut: hm(edition.heure_debut), heure_fin: hm(edition.heure_fin), capacite }), "Capacité mise à jour.")}>
+            Enregistrer
+          </Bouton>
+        }>
+        <label className="block text-[13px] font-medium">Capacité (couverts)
+          <input type="number" min={1} className={`${champ} mt-1.5`} value={capacite} onChange={(e) => setCapacite(Number(e.target.value))} />
+        </label>
+        {edition && edition !== "nouveau" && <p className="mt-2 text-[13px] text-[#717171]">{edition.commandes} commandes déjà passées.</p>}
+      </Panneau>
     </EspaceLayout>
   );
 }

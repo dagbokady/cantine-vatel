@@ -12,6 +12,7 @@ from .parametres import Parametres
 from .classe import Classe, Niveau
 from .notification import Notification
 from .appel import Appel, Presence
+from .service import AffectationCuisine, ClasseTable, Repas, SuggestionPortion
 
 __all__ = [
     "User",
@@ -33,4 +34,8 @@ __all__ = [
     "Notification",
     "Appel",
     "Presence",
+    "AffectationCuisine",
+    "ClasseTable",
+    "Repas",
+    "SuggestionPortion",
 ]

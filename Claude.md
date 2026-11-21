@@ -43,7 +43,7 @@ AUCUNE UTILISATION DE VERT.
 Conserver :
 - Space Grotesk pour les grands titres.
 - Inter pour les textes d'interface.
-
+- Aucun tiret cadratin retires les tous
 Les titres doivent être expressifs, affirmés et éditoriaux.
 
 ## Composition
