@@ -2,11 +2,11 @@ from .user import User
 from .eleve import Eleve
 from .allergene import Allergene
 from .ingredient import Ingredient, IngredientAllergene
-from .plat import Plat, PlatIngredient
+from .plat import Plat, PlatElement, PlatIngredient
 from .menu_jour import MenuJour
 from .creneau import Creneau
 from .table_salle import TableSalle, Place
-from .reservation import Reservation
+from .reservation import Reservation, ReservationElement
 from .transaction import Transaction
 from .parametres import Parametres
 from .classe import Classe, Niveau
@@ -22,11 +22,13 @@ __all__ = [
     "IngredientAllergene",
     "Plat",
     "PlatIngredient",
+    "PlatElement",
     "MenuJour",
     "Creneau",
     "TableSalle",
     "Place",
     "Reservation",
+    "ReservationElement",
     "Transaction",
     "Parametres",
     "Classe",

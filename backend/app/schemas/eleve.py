@@ -1,6 +1,6 @@
 from datetime import date, datetime, time
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MeResponse(BaseModel):
@@ -13,6 +13,17 @@ class MeResponse(BaseModel):
     solde: int
 
 
+class ElementOption(BaseModel):
+    id: int
+    nom: str
+    obligatoire: bool
+    inclus_defaut: bool
+    supplement: int
+    disponible: bool
+    allergenes: list[str]
+    bloque: str | None  # raison si l'élément est incompatible avec les allergies de l'élève
+
+
 class OptionMenu(BaseModel):
     menu_jour_id: int
     plat_id: int
@@ -22,6 +33,8 @@ class OptionMenu(BaseModel):
     type: str
     stock_restant: int
     ingredients: list[str]
+    prix_portions: dict[str, int] = {}
+    elements: list[ElementOption] = []
     compatible: bool
     raison: str | None
 
@@ -59,6 +72,9 @@ class PlaceLite(BaseModel):
     id: int
     table_nom: str
     numero: int
+    nb_places: int | None = None
+    # Chaises de la table (numéro, angle) : la carte de place reprend le plan de salle.
+    sieges: list[tuple[int, float]] = []
 
 
 class PlaceSalle(BaseModel):
@@ -90,6 +106,8 @@ class ReservationCreate(BaseModel):
     # Facultatifs : la vague se choisit le jour même, à partir de la récréation.
     creneau_id: int | None = None
     place_id: int | None = None
+    # Éléments facultatifs retenus ; absent = composition par défaut du plat.
+    elements: list[int] | None = Field(default=None, max_length=30)
 
 
 class VagueChoix(BaseModel):
@@ -106,6 +124,7 @@ class ReservationCreated(BaseModel):
     prix: int
     statut: str
     ticket: str | None
+    code: str | None = None
 
 
 class MenuAVenir(BaseModel):
@@ -132,6 +151,8 @@ class ReservationDuJourResponse(BaseModel):
     creneau: CreneauLite | None
     place: PlaceLite | None
     ticket: str | None
+    code: str | None = None
+    composition: list[str] = []
     annulable: bool
     cloture_commandes: time
     vague_a_choisir: bool = False

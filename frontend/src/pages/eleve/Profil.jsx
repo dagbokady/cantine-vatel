@@ -108,7 +108,7 @@ export default function Profil() {
 
   if (loading) {
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-dvh bg-white">
           <BackHeader to="/" />
           <div className="mx-auto flex max-w-[720px] flex-col items-center px-5 pt-28">
             <RefreshCw
@@ -125,7 +125,7 @@ export default function Profil() {
 
   if (erreur || !me) {
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-dvh bg-white">
           <BackHeader to="/" />
           <main className="mx-auto max-w-[560px] px-5 pt-16">
             <div className="rounded-[22px] border border-[#EBEBEB] p-6 text-center">
@@ -159,7 +159,7 @@ export default function Profil() {
   const reservations = hist.reservations ?? [];
 
   return (
-      <div className="min-h-screen bg-white pb-[calc(40px+env(safe-area-inset-bottom))]">
+      <div className="min-h-dvh bg-white pb-[calc(40px+env(safe-area-inset-bottom))]">
         <BackHeader to="/" />
 
         <main className="mx-auto max-w-[720px] px-5 pt-5 sm:px-7">

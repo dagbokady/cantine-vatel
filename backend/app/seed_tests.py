@@ -14,7 +14,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import select
 
 from .db import SessionLocal
-from .models import Creneau, Eleve, MenuJour, Plat, Transaction
+from .models import Creneau, Eleve, Ingredient, MenuJour, Plat, PlatElement, PlatIngredient, Transaction
 
 JOURS = 8  # aujourd'hui + 7 jours
 PORTIONS = {"principal": 60, "sans_allergene": 30, "accompagnement": 40}
@@ -25,27 +25,73 @@ ROTATION = [
         ("Attiéké poisson braisé", "principal"),
         ("Attiéké poulet braisé (sans poisson)", "sans_allergene"),
         ("Kédjénou de poulet", "principal"),
-        ("Alloco", "accompagnement"),
     ],
     [
         ("Riz sauce arachide", "principal"),
         ("Riz sauce tomate (sans arachide)", "sans_allergene"),
         ("Alloco poulet braisé", "principal"),
-        ("Alloco", "accompagnement"),
     ],
     [
         ("Foutou sauce graine", "principal"),
         ("Riz au gras", "principal"),
         ("Attiéké poulet braisé (sans poisson)", "sans_allergene"),
-        ("Alloco", "accompagnement"),
     ],
     [
         ("Alloco poisson", "principal"),
         ("Riz sauce tomate (sans arachide)", "sans_allergene"),
         ("Riz au gras", "principal"),
-        ("Alloco", "accompagnement"),
     ],
 ]
+
+# Composition des plats : (élément, ingrédient, obligatoire, inclus par défaut, supplément FCFA).
+# L'ingrédient d'un élément sort de la base du plat : l'élève peut alors le retirer.
+COMPOSITIONS = {
+    "Attiéké poisson braisé": [
+        ("Attiéké", "attiéké", True, True, 0),
+        ("Poisson braisé", "poisson braisé", True, True, 0),
+        ("Piment", "piment frais", False, True, 0),
+        ("Alloco", "banane plantain", False, False, 250),
+    ],
+    "Attiéké poulet braisé (sans poisson)": [
+        ("Attiéké", "attiéké", True, True, 0),
+        ("Poulet braisé", "poulet braisé", True, True, 0),
+        ("Piment", "piment frais", False, True, 0),
+        ("Alloco", "banane plantain", False, False, 250),
+    ],
+    "Riz sauce arachide": [
+        ("Riz", "riz", True, True, 0),
+        ("Sauce arachide", "pâte d'arachide", True, True, 0),
+        ("Alloco", "banane plantain", False, False, 250),
+    ],
+    "Riz sauce tomate (sans arachide)": [
+        ("Riz", "riz", True, True, 0),
+        ("Alloco", "banane plantain", False, False, 250),
+    ],
+    "Kédjénou de poulet": [("Piment", "piment frais", False, True, 0)],
+    "Alloco poulet braisé": [("Piment", "piment frais", False, True, 0)],
+    "Alloco poisson": [("Piment", "piment frais", False, True, 0)],
+}
+
+
+def appliquer_compositions(db) -> int:
+    """Idempotent : n'ajoute que les éléments absents, sans toucher à ceux réglés par la cuisine."""
+    ings = {i.nom: i for i in db.scalars(select(Ingredient))}
+    ajoutes = 0
+    for nom_plat, elements in COMPOSITIONS.items():
+        plat = db.scalars(select(Plat).where(Plat.nom == nom_plat)).first()
+        if plat is None:
+            continue
+        deja = {e.nom for e in db.scalars(select(PlatElement).where(PlatElement.plat_id == plat.id))}
+        for ordre, (nom, ing, oblig, defaut, supp) in enumerate(elements):
+            if nom in deja or ing not in ings:
+                continue
+            db.query(PlatIngredient).filter_by(plat_id=plat.id, ingredient_id=ings[ing].id).delete()
+            db.add(PlatElement(plat_id=plat.id, ingredient_id=ings[ing].id, nom=nom, obligatoire=oblig,
+                               inclus_defaut=defaut, supplement=supp, ordre=ordre))
+            ajoutes += 1
+    db.flush()
+    return ajoutes
+
 
 VAGUES_MIDI = [(12, 45), (13, 5), (13, 25), (13, 45)]
 SOLDE_TEST = 10000
@@ -77,6 +123,7 @@ def run(db, recharger: bool) -> None:
     if manquants:
         raise SystemExit(f"Plats absents du catalogue (lancer d'abord python -m app.seed) : {sorted(manquants)}")
 
+    elements = appliquer_compositions(db)
     menus_ajoutes = stocks_completes = vagues_ajoutees = 0
     for k in range(JOURS):
         jour = today + timedelta(days=k)
@@ -86,8 +133,8 @@ def run(db, recharger: bool) -> None:
             tiers = PORTIONS[type_] * 3
             m = existants.get(plat.id)
             if m is None:
-                db.add(MenuJour(date=jour, plat_id=plat.id, prix=plat.prix, stock_prevu=tiers,
-                                stock_restant=tiers, type=type_))
+                db.add(MenuJour(date=jour, plat_id=plat.id, prix=plat.prix, prix_tiers1=plat.prix_tiers1,
+                                prix_tiers2=plat.prix_tiers2, stock_prevu=tiers, stock_restant=tiers, type=type_))
                 menus_ajoutes += 1
             elif m.stock_restant < tiers // 2:
                 m.stock_prevu += tiers - m.stock_restant
@@ -110,7 +157,7 @@ def run(db, recharger: bool) -> None:
             recharges += 1
 
     db.commit()
-    print(f"Menus ajoutés : {menus_ajoutes} · stocks complétés : {stocks_completes} · "
+    print(f"Éléments de composition ajoutés : {elements} · Menus ajoutés : {menus_ajoutes} · stocks complétés : {stocks_completes} · "
           f"vagues ajoutées : {vagues_ajoutees} · élèves rechargés : {recharges}")
 
 

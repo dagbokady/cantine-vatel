@@ -3,15 +3,19 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ReservationProvider } from "./hooks/useReservation";
 import { I18nProvider } from "./utils/i18n";
 import RequireAuth from "./components/RequireAuth";
+import VeilleBorne from "./components/eleve/VeilleBorne";
+import MiseAJour from "./pwa/MiseAJour";
 import Login from "./pages/eleve/Login";
 import Accueil from "./pages/eleve/Accueil";
 import Profil from "./pages/eleve/Profil";
 import Reservation from "./pages/eleve/Reservation";
 import Quantite from "./pages/eleve/Quantite";
+import Composition from "./pages/eleve/Composition";
 import Horaire from "./pages/eleve/Horaire";
 import Place from "./pages/eleve/Place";
 import MenusAVenir from "./pages/eleve/MenusAVenir";
 import Connexion from "./pages/pro/Connexion";
+import Landing from "./pages/Landing";
 import Comptoir from "./pages/agent/Comptoir";
 import ParentAccueil from "./pages/parent/ParentAccueil";
 import AjouterEnfant from "./pages/parent/AjouterEnfant";
@@ -43,7 +47,10 @@ export default function App() {
       <AuthProvider>
         <ReservationProvider>
           <BrowserRouter>
+              <VeilleBorne />
+              <MiseAJour />
               <Routes>
+                <Route path="/decouvrir" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/borne" element={<Login borne />} />
                 <Route
@@ -75,6 +82,14 @@ export default function App() {
                   element={
                     <RequireAuth>
                       <Reservation />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/reservation/composition"
+                  element={
+                    <RequireAuth>
+                      <Composition />
                     </RequireAuth>
                   }
                 />

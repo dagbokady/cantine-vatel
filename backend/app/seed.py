@@ -12,6 +12,9 @@ from datetime import date, datetime, time, timedelta
 from pwdlib import PasswordHash
 from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlalchemy import delete, func, select
+
+from .services.codes import nouveau_code
+from .seed_tests import appliquer_compositions
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal, engine
@@ -658,13 +661,17 @@ def demo_eleves(db, awa, eleve2, parent_awa, plats_by_name, creneaux, places, me
     occupees.add((c.id, place.id))
     commande = datetime.combine(today - timedelta(days=1), time(20, 5)).astimezone()
     db.add(Reservation(eleve_id=awa.id, menu_jour_id=m.id, creneau_id=c.id, place_id=place.id,
-                       tiers=2, prix=arrondi_25(m.prix * 2 / 3), statut="commandee", created_at=commande))
+                       tiers=2, prix=arrondi_25(m.prix * 2 / 3), statut="commandee", created_at=commande,
+                       code=nouveau_code(db)))
     m.stock_restant -= 2
     prix_awa = arrondi_25(m.prix * 2 / 3)
     awa.solde -= prix_awa
     tx(awa, "debit", -prix_awa, "Réservation Attiéké poisson braisé (2/3)", commande)
     notif(parent_awa, awa, f"Awa a commandé Attiéké poisson braisé (2/3) pour 12 h 45. Solde : {awa.solde} F.", commande, lue=False)
     notif(parent2, eleve2, f"Solde de Kouadio : {eleve2.solde} F.", datetime.now().astimezone(), lue=False)
+
+    # Composition des plats : accompagnements et piment personnalisables.
+    appliquer_compositions(db)
 
 
 def main() -> None:

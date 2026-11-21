@@ -100,6 +100,7 @@ export default function Place() {
             creneau_id: etat.creneau.id,
             place_id: etat.place.id,
             tiers: etat.tiers,
+            elements: etat.elements,
           });
 
       confirmer(res);
@@ -145,7 +146,7 @@ export default function Place() {
   const aDesTables = salle && salle.tables.length > 0;
 
   return (
-      <div className="min-h-screen bg-white pb-36">
+      <div className="min-h-dvh bg-white pb-[calc(var(--cta-h,150px)+24px)]">
         {/* Notification de conflit */}
         {toast && (
             <div
@@ -158,7 +159,7 @@ export default function Place() {
 
         <BackHeader
             titre="Choisis ta place"
-            etape={4}
+            etape={5}
             surtitre="Dernière étape"
         />
 

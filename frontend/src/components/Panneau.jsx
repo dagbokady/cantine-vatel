@@ -5,6 +5,19 @@ import { titreStyle } from "../utils/tokens";
 
 // Panneau unique de l'application pour tout ajout, modification ou détail :
 // feuille du bas sur téléphone, fenêtre centrée (ou panneau latéral) dès 768 px.
+// Verrou de défilement partagé : la page ne redevient défilable qu'à la fermeture du dernier panneau.
+let verrous = 0;
+let overflowInitial = "";
+function verrouiller() {
+  if (verrous++ === 0) {
+    overflowInitial = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+  }
+  return () => {
+    if (--verrous === 0) document.body.style.overflow = overflowInitial;
+  };
+}
+
 export default function Panneau({ ouvert, onClose, titre, surTitre, children, pied, cote = false, large = false }) {
   const id = useId();
   const ref = useRef(null);
@@ -14,8 +27,7 @@ export default function Panneau({ ouvert, onClose, titre, surTitre, children, pi
   useEffect(() => {
     if (!ouvert) return undefined;
     const avant = document.activeElement;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const liberer = verrouiller();
     ref.current?.focus();
     const clavier = (e) => {
       if (e.key === "Escape") fermer.current();
@@ -28,7 +40,7 @@ export default function Panneau({ ouvert, onClose, titre, surTitre, children, pi
     };
     document.addEventListener("keydown", clavier);
     return () => {
-      document.body.style.overflow = overflow;
+      liberer();
       document.removeEventListener("keydown", clavier);
       avant?.focus?.();
     };
@@ -37,7 +49,7 @@ export default function Panneau({ ouvert, onClose, titre, surTitre, children, pi
   if (!ouvert) return null;
   const position = cote
     ? "md:inset-y-0 md:right-0 md:left-auto md:top-0 md:h-full md:max-h-none md:w-[480px] md:rounded-none md:rounded-l-[28px]"
-    : `md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-h-[86vh] md:rounded-[28px] ${large ? "md:w-[640px]" : "md:w-[480px]"}`;
+    : `md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-h-[86dvh] md:rounded-[28px] ${large ? "md:w-[640px]" : "md:w-[480px]"}`;
 
   return createPortal(
     <div className="fixed inset-0 z-50">
@@ -48,7 +60,7 @@ export default function Panneau({ ouvert, onClose, titre, surTitre, children, pi
         aria-modal="true"
         aria-labelledby={id}
         tabIndex={-1}
-        className={`absolute inset-x-0 bottom-0 flex max-h-[92vh] flex-col rounded-t-[28px] bg-white outline-none shadow-[0_-12px_40px_rgba(34,34,34,0.18)] animate-[monte_260ms_cubic-bezier(0.2,0.8,0.2,1)] md:animate-[fondu_200ms_ease] ${position}`}
+        className={`absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-[28px] bg-white outline-none shadow-[0_-12px_40px_rgba(34,34,34,0.18)] animate-[monte_260ms_cubic-bezier(0.2,0.8,0.2,1)] md:animate-[fondu_200ms_ease] ${position}`}
       >
         <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-[#EBEBEB] md:hidden" aria-hidden="true" />
         <header className="flex shrink-0 items-start justify-between gap-4 px-6 pb-3 pt-4 md:pt-6">

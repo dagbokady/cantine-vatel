@@ -66,10 +66,10 @@ export default function Connexion() {
   }
 
   return (
-      <main className="min-h-screen bg-white lg:grid lg:grid-cols-2">
+      <main className="min-h-dvh bg-white lg:grid lg:grid-cols-2">
 
         {/* PANNEAU VISUEL DESKTOP */}
-        <section className="relative hidden min-h-screen overflow-hidden bg-[#FFF0ED] p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
+        <section className="relative hidden min-h-dvh overflow-hidden bg-[#FFF0ED] p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
 
           <div className="relative z-10 flex items-center gap-3">
             <img src={APP_LOGO} alt="" className="h-11 w-11" />
@@ -123,7 +123,7 @@ export default function Connexion() {
         </section>
 
         {/* FORMULAIRE */}
-        <section className="flex min-h-screen items-center justify-center px-6 py-12 sm:px-10">
+        <section className="flex min-h-dvh items-center justify-center px-6 py-12 sm:px-10">
           <div className="w-full max-w-[420px]">
 
             {/* LOGO MOBILE */}

@@ -27,7 +27,9 @@ from ..models import (
     Reservation,
     Transaction,
 )
-from ..utils.prix import prix_portion
+from ..utils.prix import prix_menu
+from .codes import nouveau_code
+from .composition import composer, enregistrer_composition, rendre_stock_composition
 from .notifications import notifier, notifier_solde
 
 
@@ -116,6 +118,7 @@ def creer_reservation(
     now: datetime,
     creneau_id: int | None = None,
     place_id: int | None = None,
+    elements: list[int] | None = None,
 ) -> Reservation:
     if tiers not in (1, 2, 3):
         raise _conflit("Portion invalide.")
@@ -134,6 +137,9 @@ def creer_reservation(
     menu = db.execute(select(MenuJour).where(MenuJour.id == menu_jour_id).with_for_update()).scalar_one_or_none()
     if menu is None or jour is None or menu.date != jour:
         raise _conflit("Les commandes ne sont pas ouvertes pour ce plat.")
+    # Un accompagnement se choisit dans la composition d'un plat, jamais seul.
+    if menu.type == "accompagnement":
+        raise _conflit("Choisis d'abord un plat principal : l'accompagnement se personnalise dans ton plat.")
 
     # Une seule réservation active par jour de repas.
     deja = db.execute(
@@ -150,20 +156,20 @@ def creer_reservation(
     if plat is None:
         raise _conflit("Plat introuvable.")
 
-    # Allergies vérifiées côté serveur, l'élève n'a aucun droit de contournement.
+    # Allergies vérifiées côté serveur sur la composition finale : aucun contournement possible.
     allergies_eleve = {a.lower() for a in (eleve.allergies or [])}
-    conflit_alg = _allergenes_du_plat(db, plat.id) & allergies_eleve
-    if conflit_alg:
-        raise _conflit(f"Ce plat contient un allergène déclaré : {next(iter(conflit_alg))}.")
+    retenus, supplements = composer(db, plat.id, elements, allergies_eleve, _allergenes_du_plat(db, plat.id))
 
     if eleve.solde < 0:
         raise _conflit("Ton solde est négatif : demande à ton parent de recharger.")
-    prix = prix_portion(menu.prix, tiers)
+    prix = prix_menu(menu, tiers) + supplements
     solde_apres = eleve.solde - prix
     if solde_apres < -params.decouvert_max:
         raise _conflit("Solde insuffisant pour cette portion.")
 
-    reservation = Reservation(eleve_id=eleve.id, menu_jour_id=menu.id, tiers=tiers, prix=prix, statut="commandee")
+    reservation = Reservation(
+        eleve_id=eleve.id, menu_jour_id=menu.id, tiers=tiers, prix=prix, statut="commandee", code=nouveau_code(db)
+    )
     creneau = None
     if creneau_id is not None:
         if menu.date != now.date():
@@ -173,6 +179,8 @@ def creer_reservation(
     menu.stock_restant -= tiers
     eleve.solde = solde_apres
     db.add(reservation)
+    db.flush()
+    enregistrer_composition(db, reservation.id, retenus)
     db.add(Transaction(eleve_id=eleve.id, type="debit", montant=-prix, libelle=f"Réservation {plat.nom} ({tiers}/3)"))
     quand = f"pour {_hh(creneau.heure_debut)}" if creneau else f"pour le {menu.date.strftime('%d/%m')}"
     notifier(db, eleve, f"{eleve.nom.split()[0]} a commandé {plat.nom} ({tiers}/3) {quand}.")
@@ -232,6 +240,7 @@ def annuler_reservation(
 
     plat = db.get(Plat, menu.plat_id)
     menu.stock_restant += res.tiers
+    rendre_stock_composition(db, res.id)
     eleve.solde += res.prix
     res.statut = "annulee"
     db.add(

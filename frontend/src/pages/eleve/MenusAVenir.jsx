@@ -149,7 +149,7 @@ export default function MenusAVenir() {
     }, [chargerMenus]);
 
     return (
-        <div className="min-h-screen bg-white pb-16">
+        <div className="min-h-dvh bg-white pb-16">
             <BackHeader titre="Menus à venir" to="/" />
 
             <main className="mx-auto max-w-[760px] px-5 pt-5 sm:px-7">

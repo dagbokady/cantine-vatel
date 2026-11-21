@@ -47,10 +47,10 @@ export default function Horaire() {
   const choix = etat.creneau;
 
   return (
-      <div className="min-h-screen bg-white pb-36">
+      <div className="min-h-dvh bg-white pb-[calc(var(--cta-h,150px)+24px)]">
         <BackHeader
             titre={etat.reservationId ? "Choisis ta vague" : "Ton heure de passage"}
-            etape={3}
+            etape={4}
         />
 
         <main className="mx-auto max-w-[720px] px-5 pt-6 sm:px-7">

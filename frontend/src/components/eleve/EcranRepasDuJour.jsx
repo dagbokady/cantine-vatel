@@ -37,7 +37,7 @@ export default function EcranRepasDuJour({ me, menu }) {
         : `Repas de ${libelleJour(menu.date)}`;
 
     return (
-        <main className="min-h-screen bg-white text-[#222222]">
+        <main className="min-h-dvh bg-white text-[#222222]">
             <div className="mx-auto w-full max-w-[1120px] px-5 pb-10 sm:px-8 lg:px-10">
 
                 {/* En-tête */}

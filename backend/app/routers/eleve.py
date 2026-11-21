@@ -37,6 +37,7 @@ from ..schemas.eleve import (
     TableSalleLite,
     VagueChoix,
 )
+from ..services.composition import noms_composition
 from ..services.eleve import options_menu_du_jour
 from ..services.reservations import annuler_reservation, choisir_vague, creer_reservation, heure_limite, jour_de_commande
 from ..services.tickets import ticket_pour
@@ -205,6 +206,7 @@ def _sortie(reservation: Reservation, eleve: Eleve, db: Session) -> ReservationC
         prix=reservation.prix,
         statut=reservation.statut,
         ticket=ticket,
+        code=reservation.code,
     )
 
 
@@ -227,6 +229,7 @@ def post_reservation(
             creneau_id=body.creneau_id,
             place_id=body.place_id,
             tiers=body.tiers,
+            elements=body.elements,
             now=datetime.now(),
         )
         db.commit()
@@ -280,6 +283,8 @@ def reservation_du_jour(
     a_choisir = creneau is None
     return ReservationDuJourResponse(
         ticket=ticket_pour(res, eleve, menu.date) if creneau else None,
+        code=res.code if res.statut == "commandee" else None,
+        composition=noms_composition(db, [res.id])[res.id],
         annulable=res.statut == "commandee" and (menu.date > today or now.time() < params.cloture_commandes),
         cloture_commandes=params.cloture_commandes,
         id=res.id,
@@ -291,7 +296,13 @@ def reservation_du_jour(
         prix=res.prix,
         statut=res.statut,
         creneau=CreneauLite(id=creneau.id, heure_debut=creneau.heure_debut, heure_fin=creneau.heure_fin) if creneau else None,
-        place=PlaceLite(id=place.id, table_nom=table.nom, numero=place.numero) if place else None,
+        place=PlaceLite(
+            id=place.id,
+            table_nom=table.nom,
+            numero=place.numero,
+            nb_places=table.nb_places,
+            sieges=[(p.numero, p.angle) for p in db.scalars(select(Place).where(Place.table_id == table.id).order_by(Place.numero))],
+        ) if place else None,
         vague_a_choisir=a_choisir,
         choix_vague_ouvert=a_choisir and menu.date == today and jour_cmd == today and vague_ouverte,
         heure_recreation=params.heure_recreation,

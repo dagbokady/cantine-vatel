@@ -38,7 +38,7 @@ export default function Portions() {
       {liste && liste.length === 0 && (
         <p className="mt-8 rounded-[22px] bg-[#F7F7F7] p-6 text-[15px] text-[#717171]">Aucune suggestion en attente.</p>
       )}
-      <ul className="mt-6 grid gap-3 md:grid-cols-2">
+      <ul className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
         {liste?.map((s) => {
           const hausse = s.portion_suggeree > s.portion_actuelle;
           const Fleche = hausse ? ArrowUp : ArrowDown;
@@ -54,7 +54,7 @@ export default function Portions() {
                   <Fleche size={13} /> {hausse ? "Plus grande" : "Plus petite"}
                 </span>
               </div>
-              <div className="mt-5 flex items-end gap-6">
+              <div className="mt-5 flex flex-wrap items-end gap-x-6 gap-y-2">
                 <p className="text-[36px] font-semibold leading-none" style={titreStyle}>
                   <span className="text-[#B0B0B0]">{tiersEnFraction(s.portion_actuelle)}</span>
                   <span className="mx-2 text-[22px] text-[#B0B0B0]">→</span>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { ChefHat, Pencil } from "lucide-react";
-import { affecterCuisinier, erreurApi, getCuisiniers, getNiveaux, getParametres, putNiveau, putParametres } from "../../api/pro";
+import { ChefHat, Pencil, Plus } from "lucide-react";
+import { creerChef, erreurApi, modifierChef, getCuisiniers, getNiveaux, getParametres, putNiveau, putParametres } from "../../api/pro";
 import EspaceLayout, { Alerte, Bouton, Carte } from "../../components/EspaceLayout";
 import Panneau, { BoutonAction } from "../../components/Panneau";
 import { fcfa, formatHeure } from "../../utils/format";
@@ -11,7 +11,7 @@ const champ = "mt-1.5 h-12 w-full rounded-[12px] border border-[#EBEBEB] px-3 te
 
 function Bloc({ titre, description, children }) {
   return (
-    <section className="grid gap-4 border-t border-[#EBEBEB] py-8 first:border-t-0 first:pt-0 md:grid-cols-[280px_1fr] md:gap-10">
+    <section className="grid grid-cols-1 gap-4 border-t border-[#EBEBEB] py-8 first:border-t-0 first:pt-0 md:grid-cols-[280px_minmax(0,1fr)] md:gap-10">
       <div>
         <h2 className="text-[20px] font-semibold" style={titreStyle}>{titre}</h2>
         <p className="mt-1.5 text-[14px] leading-relaxed text-[#717171]">{description}</p>
@@ -48,15 +48,43 @@ function FormCommandes({ p, onClose, onSave }) {
   );
 }
 
-function FormCuisinier({ c, niveaux, onClose, onSave }) {
-  const [ids, setIds] = useState(c.niveaux.map((n) => n.id));
+// Création, modification, réaffectation et désactivation d'un chef. Jamais de suppression :
+// ses retours et décisions passés restent attribués.
+function FormChef({ c, niveaux, onClose, onSave }) {
+  const nouveau = !c.id;
+  const [f, setF] = useState({ nom: c.nom ?? "", identifiant: c.identifiant ?? "", mot_de_passe: "", actif: c.actif ?? true });
+  const [ids, setIds] = useState((c.niveaux ?? []).map((n) => n.id));
   const modeChoisi = niveaux.find((n) => ids.includes(n.id))?.mode;
   const basculer = (id) => setIds(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+  const mdpOk = nouveau ? f.mot_de_passe.length >= 8 : !f.mot_de_passe || f.mot_de_passe.length >= 8;
+  const valide = f.nom.trim().length >= 2 && f.identifiant.trim().length >= 3 && mdpOk;
   return (
-    <Panneau ouvert onClose={onClose} titre={c.nom} surTitre="Affectation"
-      pied={<Bouton className="w-full" onClick={() => onSave(ids)}>Enregistrer</Bouton>}>
-      <p className="text-[14px] text-[#717171]">Un cuisinier travaille dans un seul mode : son espace s'adapte automatiquement.</p>
-      <ul className="mt-4 space-y-2">
+    <Panneau ouvert onClose={onClose} titre={nouveau ? "Nouveau chef" : c.nom} surTitre={nouveau ? "Ajouter" : "Modifier"}
+      pied={<Bouton className="w-full" disabled={!valide} onClick={() => onSave({ ...f, mot_de_passe: f.mot_de_passe || null, niveau_ids: ids })}>Enregistrer</Bouton>}>
+      <div className="grid gap-4">
+        <label className="text-[13px] font-medium">Nom
+          <input className={champ} value={f.nom} onChange={(e) => setF({ ...f, nom: e.target.value })} autoComplete="off" />
+        </label>
+        <label className="text-[13px] font-medium">Identifiant de connexion
+          <input type="email" className={champ} value={f.identifiant} placeholder="nom@ecole.ci" autoComplete="off"
+            onChange={(e) => setF({ ...f, identifiant: e.target.value })} />
+        </label>
+        <label className="text-[13px] font-medium">{nouveau ? "Mot de passe provisoire" : "Nouveau mot de passe (facultatif)"}
+          <input type="password" className={champ} value={f.mot_de_passe} autoComplete="new-password"
+            onChange={(e) => setF({ ...f, mot_de_passe: e.target.value })} />
+          <span className={`mt-1 block text-[12px] font-normal ${mdpOk ? "text-[#B0B0B0]" : "text-[#B30000]"}`}>8 caractères minimum.</span>
+        </label>
+        {!nouveau && (
+          <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-[16px] border border-[#EBEBEB] px-4">
+            <input type="checkbox" className="h-5 w-5 accent-[#FF5A5F]" checked={f.actif} onChange={(e) => setF({ ...f, actif: e.target.checked })} />
+            <span className="flex-1 text-[15px] font-medium">Compte actif</span>
+            <span className="text-[13px] text-[#717171]">{f.actif ? "Peut se connecter" : "Accès bloqué"}</span>
+          </label>
+        )}
+      </div>
+      <p className="mt-6 text-[13px] font-medium">Cuisine : niveaux servis</p>
+      <p className="mt-1 text-[13px] text-[#717171]">Plusieurs chefs peuvent partager les mêmes niveaux. Un chef travaille dans un seul mode.</p>
+      <ul className="mt-3 space-y-2">
         {niveaux.map((n) => {
           const coche = ids.includes(n.id);
           const bloque = !coche && modeChoisi && n.mode !== modeChoisi;
@@ -71,7 +99,6 @@ function FormCuisinier({ c, niveaux, onClose, onSave }) {
           );
         })}
       </ul>
-      {modeChoisi && <p className="mt-3 text-[13px] text-[#717171]">Mode retenu : {MODE[modeChoisi]}.</p>}
     </Panneau>
   );
 }
@@ -93,7 +120,7 @@ export default function Parametres() {
       {p && (
         <Bloc titre="Commandes" description="Fenêtre pendant laquelle les élèves réservent, et découvert toléré sur leur crédit.">
           <Carte className="flex flex-wrap items-center justify-between gap-4">
-            <dl className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
+            <dl className="grid min-w-0 flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
               <div><dt className="text-[12px] text-[#717171]">Ouverture</dt><dd className="text-[18px] font-semibold" style={titreStyle}>{formatHeure(p.ouverture_commandes)}</dd></div>
               <div><dt className="text-[12px] text-[#717171]">Clôture</dt><dd className="text-[18px] font-semibold" style={titreStyle}>{formatHeure(p.cloture_commandes)}</dd></div>
               <div><dt className="text-[12px] text-[#717171]">Choix de vague</dt><dd className="text-[18px] font-semibold" style={titreStyle}>{formatHeure(p.heure_recreation ?? "10:00")}</dd></div>
@@ -106,7 +133,7 @@ export default function Parametres() {
       <Bloc titre="Mode par niveau" description="Pour chaque niveau, repas gérés par classe ou par commande individuelle.">
         <ul className="divide-y divide-[#EBEBEB] rounded-[22px] border border-[#EBEBEB]">
           {niveaux.map((n) => (
-            <li key={n.id} className="flex items-center justify-between gap-3 px-5 py-3">
+            <li key={n.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
               <span className="text-[16px] font-medium">{n.nom}</span>
               <div className="flex rounded-full bg-[#F7F7F7] p-1">
                 {["classe", "commande"].map((m) => (
@@ -121,18 +148,24 @@ export default function Parametres() {
           ))}
         </ul>
       </Bloc>
-      <Bloc titre="Cuisiniers" description="Affectez chaque cuisinier à un ou plusieurs niveaux du même mode.">
+      <Bloc titre="Chefs de cuisine" description="Comptes et affectations des chefs. Les prix des portions et la composition des plats sont réglés par les chefs eux-mêmes.">
+        <div className="mb-3 flex justify-end">
+          <BoutonAction icone={Plus} onClick={() => setEdition({})}>Nouveau chef</BoutonAction>
+        </div>
         <ul className="divide-y divide-[#EBEBEB] rounded-[22px] border border-[#EBEBEB]">
           {cuisiniers.map((c) => (
             <li key={c.id} className="flex items-center gap-3 px-5 py-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF0ED] text-[#FF5A5F]"><ChefHat size={18} /></span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium">{c.nom}</p>
+                <p className="flex items-center gap-2 truncate text-[15px] font-medium">
+                  {c.nom}
+                  {!c.actif && <span className="rounded-full bg-[#F7F7F7] px-2 py-0.5 text-[11px] font-medium text-[#717171]">Désactivé</span>}
+                </p>
                 <p className="truncate text-[13px] text-[#717171]">
                   {c.niveaux.length ? `${c.niveaux.map((n) => n.nom).join(", ")} · ${MODE[c.niveaux[0].mode]}` : "Non affecté : voit tous les niveaux"}
                 </p>
               </div>
-              <BoutonAction variante="doux" icone={Pencil} label={`Modifier l'affectation de ${c.nom}`} onClick={() => setEdition(c)}>
+              <BoutonAction variante="doux" icone={Pencil} label={`Modifier ${c.nom}`} onClick={() => setEdition(c)}>
                 <span className="hidden sm:inline">Modifier</span>
               </BoutonAction>
             </li>
@@ -145,11 +178,16 @@ export default function Parametres() {
           onSave={(f) => faire(async () => { await putParametres(f); setP(f); }, "Paramètres enregistrés.")} />
       )}
       {edition && edition !== "commandes" && (
-        <FormCuisinier c={edition} niveaux={niveaux} onClose={() => setEdition(null)}
-          onSave={(ids) => faire(async () => {
-            const maj = await affecterCuisinier(edition.id, ids);
-            setCuisiniers(cuisiniers.map((x) => (x.id === maj.id ? maj : x)));
-          }, "Affectation enregistrée.")} />
+        <FormChef c={edition} niveaux={niveaux} onClose={() => setEdition(null)}
+          onSave={(corps) => faire(async () => {
+            if (edition.id) {
+              const maj = await modifierChef(edition.id, corps);
+              setCuisiniers(cuisiniers.map((x) => (x.id === maj.id ? maj : x)));
+            } else {
+              const cree = await creerChef(corps);
+              setCuisiniers([...cuisiniers, cree].sort((a, b) => a.nom.localeCompare(b.nom)));
+            }
+          }, edition.id ? "Chef mis à jour." : "Chef ajouté.")} />
       )}
     </EspaceLayout>
   );

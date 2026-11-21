@@ -7,6 +7,8 @@ import { titreStyle } from "../../utils/tokens";
 import { APP_LOGO, APP_NAME } from "../../config/app";
 import { MATRICULE_ERREUR, matriculeValide, normaliserMatricule } from "../../utils/matricule";
 import { activerBorne } from "../../utils/jour";
+import AccueilBorne from "../../components/eleve/AccueilBorne";
+import BoutonInstaller from "../../pwa/BoutonInstaller";
 
 const NB_CHIFFRES = 4;
 
@@ -92,6 +94,20 @@ export default function Login({ borne = false }) {
 
   const [touche, setTouche] = useState(false);
   const matOk = matriculeValide(matricule);
+  // Borne : l'écran d'accueil « Commander » précède l'identification.
+  const [identification, setIdentification] = useState(!borne);
+
+  // Borne laissée sur le formulaire : retour à l'accueil après une minute sans saisie.
+  useEffect(() => {
+    if (!borne || !identification) return;
+    const t = setTimeout(() => {
+      setIdentification(false);
+      setMatricule("");
+      setPin("");
+      setError("");
+    }, 60000);
+    return () => clearTimeout(t);
+  }, [borne, identification, matricule, pin]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -132,11 +148,13 @@ export default function Login({ borne = false }) {
     setError("");
   }
 
+  if (!identification) return <AccueilBorne onCommander={() => setIdentification(true)} />;
+
   return (
-      <main className="min-h-screen bg-white lg:grid lg:grid-cols-2">
+      <main className="min-h-dvh bg-white lg:grid lg:grid-cols-2">
 
         {/* Partie visuelle */}
-        <section className="relative hidden min-h-screen overflow-hidden bg-[#FFF0ED] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+        <section className="relative hidden min-h-dvh overflow-hidden bg-[#FFF0ED] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
 
           <div className="relative z-10 flex items-center gap-3">
             <img src={APP_LOGO} alt="" className="h-11 w-11" />
@@ -190,7 +208,7 @@ export default function Login({ borne = false }) {
         </section>
 
         {/* Formulaire */}
-        <section className="flex min-h-screen items-center justify-center px-6 py-12 sm:px-10">
+        <section className="flex min-h-dvh items-center justify-center px-6 py-12 sm:px-10">
           <div className="w-full max-w-[420px]">
 
             <div className="mb-12 lg:hidden">
@@ -202,6 +220,16 @@ export default function Login({ borne = false }) {
                 {APP_NAME}
               </h1>
             </div>
+
+            {borne && (
+                <button
+                    type="button"
+                    onClick={() => setIdentification(false)}
+                    className="mb-6 min-h-11 text-sm font-medium text-[#717171] hover:text-[#222222]"
+                >
+                  ← Retour à l'accueil de la borne
+                </button>
+            )}
 
             <div className="mb-9">
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF5A5F]">
@@ -321,8 +349,20 @@ export default function Login({ borne = false }) {
               <span className="text-[#FF5A5F]">Accéder à l'espace pro</span>
             </Link>
 
+            {!borne && (
+                <div className="mt-6 flex justify-center">
+                  <BoutonInstaller />
+                </div>
+            )}
+
             <p className="mt-8 text-center text-xs text-[#B0B0B0]">
               Ton espace personnel est sécurisé.
+              {!borne && (
+                  <>
+                    {" · "}
+                    <Link to="/decouvrir" className="underline-offset-2 hover:text-[#222222] hover:underline">Découvrir {APP_NAME}</Link>
+                  </>
+              )}
             </p>
           </div>
         </section>

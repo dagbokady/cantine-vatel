@@ -11,7 +11,8 @@ import {
   decouperNomPlat,
   fcfa,
   formatHeure,
-  prixPortion,
+  prixTotal,
+  supplementsChoisis,
 } from "../../utils/format";
 import { libelleJour } from "../../utils/jour";
 import { titreStyle } from "../../utils/tokens";
@@ -37,7 +38,8 @@ export default function Quantite() {
   const sansVague = !etat.plat.vague_ouverte;
 
   const nomPlat = decouperNomPlat(etat.plat.nom).nom;
-  const prix = prixPortion(etat.plat.prix, etat.tiers);
+  const supplements = supplementsChoisis(etat.plat, etat.elements);
+  const prix = prixTotal(etat.plat, etat.tiers, etat.elements);
 
   const commander = async () => {
     if (envoi) return;
@@ -49,6 +51,7 @@ export default function Quantite() {
       const reservation = await postReservation({
         menu_jour_id: etat.plat.menu_jour_id,
         tiers: etat.tiers,
+        elements: etat.elements,
       });
 
       confirmer(reservation);
@@ -62,14 +65,14 @@ export default function Quantite() {
   };
 
   return (
-      <div className="min-h-screen bg-white pb-36">
-        <BackHeader titre="Compose ton assiette" etape={2} />
+      <div className="min-h-dvh bg-white pb-[calc(var(--cta-h,150px)+24px)]">
+        <BackHeader titre="Ta portion" etape={3} />
 
         <main className="mx-auto max-w-[720px] px-5 pb-8 pt-5 sm:px-7">
           {/* Introduction */}
           <div className="mb-6">
             <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#717171]">
-              ÉTAPE 02 · TA PORTION
+              ÉTAPE 03 · TA PORTION
             </p>
 
             <h1
@@ -112,7 +115,8 @@ export default function Quantite() {
               </p>
 
               <p className="mt-1 text-[13px] text-[#717171]">
-                Prix de base : {fcfa(etat.plat.prix)}
+                Assiette complète : {fcfa(etat.plat.prix)}
+                {supplements > 0 && ` · suppléments +${fcfa(supplements)}`}
               </p>
             </div>
           </div>
@@ -135,6 +139,7 @@ export default function Quantite() {
             <PortionPicker
                 plat={etat.plat}
                 tiers={etat.tiers}
+                supplements={supplements}
                 onChange={choisirTiers}
             />
           </section>
@@ -143,7 +148,7 @@ export default function Quantite() {
           <div className="mt-5 flex items-center justify-between gap-4 border-b border-[#EBEBEB] pb-5">
             <div>
               <p className="text-[12px] text-[#717171]">
-                Prix de ta portion
+                {supplements > 0 ? "Portion et suppléments" : "Prix de ta portion"}
               </p>
 
               <p

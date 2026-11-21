@@ -23,3 +23,18 @@ export const decouperNomPlat = (nom = "") => {
   if (!m) return { nom, mention: null };
   return { nom: m[1], mention: m[2].charAt(0).toUpperCase() + m[2].slice(1) };
 };
+
+// Prix d'une portion d'un menu : prix réglés par le chef, sinon proportionnels au prix entier.
+export const prixDePortion = (plat, tiers) =>
+  plat?.prix_portions?.[tiers] ?? prixPortion(plat?.prix ?? 0, tiers);
+
+// Suppléments des éléments facultatifs retenus (les obligatoires sont inclus).
+export const supplementsChoisis = (plat, elements = []) =>
+  (plat?.elements ?? [])
+    .filter((e) => !e.obligatoire && elements.includes(e.id))
+    .reduce((t, e) => t + e.supplement, 0);
+
+export const prixTotal = (plat, tiers, elements) => prixDePortion(plat, tiers) + supplementsChoisis(plat, elements);
+
+export const elementsParDefaut = (plat) =>
+  (plat?.elements ?? []).filter((e) => !e.obligatoire && e.inclus_defaut && !e.bloque && e.disponible).map((e) => e.id);

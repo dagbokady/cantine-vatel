@@ -7,6 +7,7 @@ const del = (url) => api.delete(url).then((r) => r.data);
 
 // Comptoir
 export const servirTicket = (ticket) => post("/agent/servir", { ticket });
+export const servirCode = (code) => post("/agent/servir-code", { code });
 export const getServiceDuJour = () => get("/agent/service-du-jour");
 
 export { get, post, put, del };
@@ -34,6 +35,9 @@ export const majMenu = (id, portions) => put(`/cuisine/menus/${id}`, { portions 
 export const supprimerMenu = (id) => del(`/cuisine/menus/${id}`);
 export const getPlats = () => get("/cuisine/plats");
 export const creerPlat = (body) => post("/cuisine/plats", body);
+export const majElementsPlat = (id, elements) => put(`/cuisine/plats/${id}/elements`, elements);
+export const majPrixPlat = (id, body) => put(`/cuisine/plats/${id}/prix`, body);
+export const majPrixMenu = (id, body) => put(`/cuisine/menus/${id}/prix`, body);
 export const getIngredients = () => get("/cuisine/ingredients");
 export const creerIngredient = (body) => post("/cuisine/ingredients", body);
 export const getAllergenesCuisine = () => get("/cuisine/allergenes");
@@ -70,6 +74,8 @@ export const supprimerTable = (id) => del(`/admin/tables/${id}`);
 export const majPlace = (id, pmr) => put(`/admin/places/${id}`, { pmr });
 export const getCuisiniers = () => get("/admin/cuisiniers");
 export const affecterCuisinier = (id, niveau_ids) => put(`/admin/cuisiniers/${id}`, { niveau_ids });
+export const creerChef = (body) => post("/admin/chefs", body);
+export const modifierChef = (id, body) => put(`/admin/chefs/${id}`, body);
 export const getClassesModeClasse = () => get("/admin/classes");
 export const placerClasse = (id, body) => put(`/admin/classes/${id}`, body);
 export const getSuggestionsPortion = () => get("/admin/suggestions-portion");

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
-import { erreurApi, getMenusCuisine, getPlats, majMenu, publierMenu, supprimerMenu } from "../../api/pro";
+import { Pencil, Plus, Tag } from "lucide-react";
+import { erreurApi, getMenusCuisine, getPlats, majMenu, majPrixMenu, publierMenu, supprimerMenu } from "../../api/pro";
+import { useAuth } from "../../hooks/useAuth";
+import { PanneauPrix } from "./PlatEdition";
 import EspaceLayout, { Alerte, Bouton } from "../../components/EspaceLayout";
 import Panneau, { BoutonAction } from "../../components/Panneau";
 import { Libelle } from "../../components/ui";
@@ -8,7 +10,8 @@ import { fcfa } from "../../utils/format";
 import { ONGLETS_CUISINE } from "./onglets";
 import NotificationsCommandes from "./Notifications";
 
-const TYPES = { principal: "Plat principal", sans_allergene: "Sans allergène", accompagnement: "Accompagnement" };
+// L'accompagnement seul ne se commande pas : il sert au mode classe ; en mode commande il se configure dans la composition du plat.
+const TYPES = { principal: "Plat principal", sans_allergene: "Sans allergène", accompagnement: "Accompagnement (mode classe)" };
 const champ = "mt-1.5 h-12 w-full rounded-[12px] border border-[#EBEBEB] bg-white px-3 text-[16px] outline-none focus:border-[#222222]";
 const VIDE = () => ({ date: new Date().toLocaleDateString("sv-SE"), plat_id: "", type: "principal", portions: 60 });
 
@@ -19,6 +22,8 @@ export default function Menus() {
   const [edition, setEdition] = useState(null); // "nouveau" | menu
   const [portions, setPortions] = useState(0);
   const [msg, setMsg] = useState({ texte: "", ok: true });
+  const [prixMenu, setPrixMenu] = useState(null);
+  const { user } = useAuth();
 
   const charger = useCallback(() => getMenusCuisine().then(setMenus), []);
   useEffect(() => { charger(); getPlats().then(setPlats); }, [charger]);
@@ -44,8 +49,11 @@ export default function Menus() {
               <li key={m.id} className="flex flex-wrap items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-medium text-[#222222]">{m.plat_nom}</p>
-                  <p className="text-[13px] text-[#717171]">{TYPES[m.type]} · {fcfa(m.prix)} · reste {m.portions_restantes} / {m.portions_prevues} portions</p>
+                  <p className="text-[13px] text-[#717171]">{TYPES[m.type]} · {["1", "2", "3"].map((t) => `${t}/3 ${fcfa(m.prix_portions?.[t] ?? m.prix)}`).join(" · ")} · reste {m.portions_restantes} / {m.portions_prevues} portions</p>
                 </div>
+                {user?.role === "cuisine" && (
+                  <BoutonAction variante="doux" icone={Tag} label={`Prix de ${m.plat_nom}`} onClick={() => setPrixMenu(m)} />
+                )}
                 <BoutonAction variante="doux" icone={Pencil} label={`Modifier ${m.plat_nom}`} onClick={() => { setPortions(m.portions_prevues); setEdition(m); }} />
               </li>
             ))}
@@ -101,6 +109,8 @@ export default function Menus() {
           </>
         )}
       </Panneau>
+      <PanneauPrix plat={prixMenu} titre="Prix de ce menu" enregistrer={majPrixMenu} onClose={() => setPrixMenu(null)}
+        onSaved={async (_, texte) => { setPrixMenu(null); await charger(); setMsg({ texte, ok: true }); }} />
     </EspaceLayout>
   );
 }

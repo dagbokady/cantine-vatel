@@ -1,14 +1,14 @@
 import { useRef } from "react";
-import { prixPortion, fcfa, tiersEnFraction } from "../../utils/format";
+import { prixDePortion, fcfa, tiersEnFraction } from "../../utils/format";
 import { titreStyle } from "../../utils/tokens";
 import AssietteRiz from "./AssietteRiz";
 
 const TIERS = [1, 2, 3];
 
-export default function PortionPicker({ plat, tiers, onChange }) {
+export default function PortionPicker({ plat, tiers, supplements = 0, onChange }) {
   const piste = useRef(null);
   const glisse = useRef(false);
-  const prix = plat ? prixPortion(plat.prix, tiers) : 0;
+  const prix = plat ? prixDePortion(plat, tiers) + supplements : 0;
   const pos = ((tiers - 1) / 2) * 100;
 
   const versCran = (clientX) => {

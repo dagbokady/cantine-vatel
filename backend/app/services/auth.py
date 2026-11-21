@@ -56,6 +56,6 @@ def create_user_token(user: User) -> str:
 
 def authenticate_user(db: Session, identifiant: str, secret: str) -> User | None:
     user = db.scalars(select(User).where(User.identifiant == identifiant.strip().lower())).first()
-    if user is None or not verify_pin(secret, user.secret_hash):
+    if user is None or not user.actif or not verify_pin(secret, user.secret_hash):
         return None
     return user

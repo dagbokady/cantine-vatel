@@ -15,6 +15,7 @@ import { titreStyle } from "../../utils/tokens";
 import { Avatar, Libelle } from "../ui";
 import { estAujourdhui, estBorne, libelleJour } from "../../utils/jour";
 import FinBorne from "./FinBorne";
+import CartePlace from "./CartePlace";
 
 function secondesJusquA(hhmmss) {
   const [h, m] = hhmmss.split(":").map(Number);
@@ -87,8 +88,8 @@ export default function EcranReservationEnCours({
   };
 
   return (
-      <main className="min-h-screen bg-white text-[#222222]">
-        <div className="mx-auto w-full max-w-[760px] px-5 pb-[calc(32px+env(safe-area-inset-bottom))] sm:px-8">
+      <main className="min-h-dvh bg-white text-[#222222]">
+        <div className="mx-auto w-full max-w-[760px] px-4 pb-[calc(32px+env(safe-area-inset-bottom))] sm:px-8">
 
           {/* En-tête */}
           <header className="flex items-center justify-between border-b border-[#EBEBEB] py-5">
@@ -168,65 +169,77 @@ export default function EcranReservationEnCours({
               </section>
           )}
 
-          {/* Ticket QR */}
+          {/* Ticket : QR code puis code de secours */}
           {!servie && !aChoisir && reservation.ticket && (
-              <section className="mt-6 rounded-[24px] border border-[#EBEBEB] p-5 sm:p-6">
+              <section className="mt-6 rounded-[24px] border border-[#EBEBEB] px-4 py-6 sm:p-7">
                 <div className="text-center">
                   <Libelle>Ton ticket de cantine</Libelle>
-
                   <p className="mt-2 text-[14px] text-[#717171]">
                     Présente ce QR code au comptoir.
                   </p>
                 </div>
 
-                <div className="mx-auto mt-5 flex w-fit items-center justify-center rounded-[20px] bg-white p-4">
+                <div className="mx-auto mt-5 w-full max-w-[236px] rounded-[20px] bg-white p-2">
                   <QRCodeSVG
                       value={reservation.ticket}
                       size={220}
                       level="M"
+                      style={{ width: "100%", height: "auto" }}
                   />
                 </div>
 
+                {reservation.code && (
+                    <div className="mx-auto mt-5 max-w-[320px] rounded-[20px] bg-[#F7F7F7] px-4 py-4 text-center">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#717171]">
+                        Code de secours
+                      </p>
+                      <p
+                          className="mt-1 select-all font-mono text-[34px] font-semibold tracking-[0.18em] text-[#222222] sm:text-[38px]"
+                          aria-label={`Code de secours : ${reservation.code.split("").join(" ")}`}
+                      >
+                        {reservation.code}
+                      </p>
+                      <p className="mt-1 text-[13px] leading-5 text-[#717171]">
+                        Si tu ne peux pas présenter ton QR code, communique ce code à l'agent.
+                      </p>
+                    </div>
+                )}
+
                 <p className="mt-4 text-center text-[11px] text-[#B0B0B0]">
-                  Ticket personnel · Ne partage pas ce code
+                  Ticket personnel · Ne partage pas ces codes
                 </p>
               </section>
           )}
 
-          {/* Plat */}
-          <section className="mt-6 overflow-hidden rounded-[24px] border border-[#EBEBEB]">
-            <div className="aspect-[4/3] bg-[#F7F7F7] sm:aspect-[16/9]">
-              {reservation.plat_photo ? (
-                  <img
-                      src={reservation.plat_photo}
-                      alt={reservation.plat_nom}
-                      className="h-full w-full object-cover"
-                  />
-              ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <UtensilsCrossed
-                        size={48}
-                        strokeWidth={1.2}
-                        className="text-[#B0B0B0]"
+          {/* Repas et place */}
+          <section className={`mt-6 grid gap-3 ${reservation.place ? "min-[360px]:grid-cols-[1.15fr_1fr]" : ""}`}>
+            <div className="overflow-hidden rounded-[22px] border border-[#EBEBEB]">
+              <div className={`bg-[#F7F7F7] ${reservation.place ? "aspect-square" : "aspect-[16/9]"}`}>
+                {reservation.plat_photo ? (
+                    <img
+                        src={reservation.plat_photo}
+                        alt={reservation.plat_nom}
+                        className="h-full w-full object-cover"
                     />
-                  </div>
-              )}
+                ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <UtensilsCrossed size={44} strokeWidth={1.2} className="text-[#B0B0B0]" />
+                    </div>
+                )}
+              </div>
+              <div className="p-4">
+                <Libelle>Repas réservé</Libelle>
+                <h2 className="mt-1 text-[19px] font-semibold" style={titreStyle}>
+                  {reservation.plat_nom}
+                </h2>
+                {reservation.composition?.length > 0 && (
+                    <p className="mt-1 text-[13px] leading-5 text-[#717171]">
+                      {reservation.composition.join(" · ")}
+                    </p>
+                )}
+              </div>
             </div>
-
-            <div className="p-5 sm:p-6">
-              <Libelle>Repas réservé</Libelle>
-
-              <h2
-                  className="mt-2 text-[24px] font-semibold"
-                  style={titreStyle}
-              >
-                {reservation.plat_nom}
-              </h2>
-
-              <p className="mt-2 text-[15px] text-[#717171]">
-                {fcfa(reservation.prix)}
-              </p>
-            </div>
+            {reservation.place && <CartePlace place={reservation.place} />}
           </section>
 
           {/* Détails */}
@@ -247,12 +260,7 @@ export default function EcranReservationEnCours({
                 />
             )}
 
-            {reservation.place && (
-                <Ligne
-                    label="Place"
-                    valeur={`Table ${reservation.place.table_nom.replace(/^T/, "")} · place ${reservation.place.numero}`}
-                />
-            )}
+            <Ligne label="Statut" valeur={servie ? "Servi" : aChoisir ? "Vague à choisir" : "Confirmée"} />
           </section>
 
           {/* Compte à rebours */}

@@ -23,6 +23,7 @@ from ..models import (
     TableSalle,
     User,
 )
+from ..services.auth import hash_pin
 from ..services.service_cuisine import suggestion_out
 from ..services.dashboard import tableau_de_bord
 from ..services import scolarite
@@ -288,11 +289,25 @@ class AffectationIn(BaseModel):
     niveau_ids: list[int]
 
 
+class ChefIn(BaseModel):
+    nom: str = Field(min_length=2, max_length=120)
+    identifiant: str = Field(min_length=3, max_length=120)
+    mot_de_passe: str | None = Field(default=None, min_length=8, max_length=128)
+    niveau_ids: list[int] = []
+    actif: bool = True
+
+
 def _cuisinier_out(db: Session, u: User) -> dict:
     niveaux = db.scalars(
         select(Niveau).join(AffectationCuisine, AffectationCuisine.niveau_id == Niveau.id).where(AffectationCuisine.user_id == u.id)
     ).all()
-    return {"id": u.id, "nom": u.nom, "identifiant": u.identifiant, "niveaux": [{"id": n.id, "nom": n.nom, "mode": n.mode} for n in niveaux]}
+    return {
+        "id": u.id,
+        "nom": u.nom,
+        "identifiant": u.identifiant,
+        "actif": u.actif,
+        "niveaux": [{"id": n.id, "nom": n.nom, "mode": n.mode} for n in niveaux],
+    }
 
 
 @router.get("/cuisiniers")
@@ -300,19 +315,69 @@ def cuisiniers(_: User = Depends(admin), db: Session = Depends(get_db)):
     return [_cuisinier_out(db, u) for u in db.scalars(select(User).where(User.role == "cuisine").order_by(User.nom))]
 
 
-@router.put("/cuisiniers/{user_id}")
-def affecter_cuisinier(user_id: int, body: AffectationIn, _: User = Depends(admin), db: Session = Depends(get_db)):
-    u = db.get(User, user_id)
-    if u is None or u.role != "cuisine":
-        raise HTTPException(status_code=404, detail="Cuisinier introuvable.")
-    niveaux = db.scalars(select(Niveau).where(Niveau.id.in_(body.niveau_ids))).all()
-    if len(niveaux) != len(set(body.niveau_ids)):
+def _affecter(db: Session, u: User, niveau_ids: list[int]) -> None:
+    """Plusieurs chefs peuvent partager les mêmes niveaux (relation plusieurs-à-plusieurs)."""
+    niveaux = db.scalars(select(Niveau).where(Niveau.id.in_(niveau_ids))).all()
+    if len(niveaux) != len(set(niveau_ids)):
         raise HTTPException(status_code=422, detail="Niveau inconnu.")
     if len({n.mode for n in niveaux}) > 1:
         raise HTTPException(status_code=409, detail="Un cuisinier ne peut pas travailler en mode classe et en mode commande à la fois.")
     db.execute(delete(AffectationCuisine).where(AffectationCuisine.user_id == u.id))
     for n in niveaux:
         db.add(AffectationCuisine(user_id=u.id, niveau_id=n.id))
+
+
+def _chef(db: Session, user_id: int) -> User:
+    u = db.execute(select(User).where(User.id == user_id).with_for_update()).scalar_one_or_none()
+    if u is None or u.role != "cuisine":
+        raise HTTPException(status_code=404, detail="Cuisinier introuvable.")
+    return u
+
+
+def _identifiant_libre(db: Session, identifiant: str, sauf: int | None = None) -> str:
+    ident = identifiant.strip().lower()
+    autre = db.scalars(select(User.id).where(User.identifiant == ident)).first()
+    if autre is not None and autre != sauf:
+        raise HTTPException(status_code=409, detail="Un compte existe déjà avec cet identifiant.")
+    return ident
+
+
+@router.put("/cuisiniers/{user_id}")
+def affecter_cuisinier(user_id: int, body: AffectationIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    u = _chef(db, user_id)
+    _affecter(db, u, body.niveau_ids)
+    db.commit()
+    return _cuisinier_out(db, u)
+
+
+@router.post("/chefs", status_code=201)
+def creer_chef(body: ChefIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    if not body.mot_de_passe:
+        raise HTTPException(status_code=422, detail="Mot de passe provisoire requis (8 caractères minimum).")
+    u = User(
+        nom=body.nom.strip(),
+        identifiant=_identifiant_libre(db, body.identifiant),
+        secret_hash=hash_pin(body.mot_de_passe),
+        role="cuisine",
+        actif=body.actif,
+    )
+    db.add(u)
+    db.flush()
+    _affecter(db, u, body.niveau_ids)
+    db.commit()
+    return _cuisinier_out(db, u)
+
+
+@router.put("/chefs/{user_id}")
+def modifier_chef(user_id: int, body: ChefIn, _: User = Depends(admin), db: Session = Depends(get_db)):
+    """Modifie, réaffecte ou désactive un chef. Aucune suppression : l'historique reste attribué."""
+    u = _chef(db, user_id)
+    u.nom = body.nom.strip()
+    u.identifiant = _identifiant_libre(db, body.identifiant, sauf=u.id)
+    if body.mot_de_passe:
+        u.secret_hash = hash_pin(body.mot_de_passe)
+    u.actif = body.actif
+    _affecter(db, u, body.niveau_ids)
     db.commit()
     return _cuisinier_out(db, u)
 

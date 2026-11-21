@@ -1,9 +1,10 @@
+import {useEffect, useRef} from "react";
 import {useNavigate} from "react-router-dom";
 import {ArrowLeft, Check} from "lucide-react";
 
 import {titreStyle} from "../utils/tokens";
 
-export const NB_ETAPES = 4;
+export const NB_ETAPES = 5;
 
 
 export function BackHeader({
@@ -86,8 +87,24 @@ export function BottomCTA({
                               disabled = false,
                               aside,
                           }) {
+    // Hauteur réelle publiée en variable CSS : les pages réservent exactement cet espace.
+    const barre = useRef(null);
+    useEffect(() => {
+        const el = barre.current;
+        if (!el) return undefined;
+        const racine = document.documentElement;
+        const publier = () => racine.style.setProperty("--cta-h", `${el.offsetHeight}px`);
+        publier();
+        const obs = new ResizeObserver(publier);
+        obs.observe(el);
+        return () => {
+            obs.disconnect();
+            racine.style.removeProperty("--cta-h");
+        };
+    }, []);
+
     return (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#EBEBEB] bg-white/95 backdrop-blur-md">
+        <div ref={barre} className="fixed inset-x-0 bottom-0 z-40 border-t border-[#EBEBEB] bg-white/95 backdrop-blur-md">
             <div
                 className="mx-auto flex w-full max-w-[560px] flex-col gap-3 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] sm:px-6">
                 {aside && (

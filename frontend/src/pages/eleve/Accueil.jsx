@@ -69,7 +69,7 @@ export default function Accueil() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-canvas)]">
+            <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--color-canvas)]">
                 <div className="relative flex h-20 w-20 items-center justify-center">
                     <div className="absolute inset-0 animate-ping rounded-full bg-[#FF5A5F]/10" />
                     <img
@@ -92,7 +92,7 @@ export default function Accueil() {
 
     if (error) {
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-canvas)] px-6 text-center">
+            <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--color-canvas)] px-6 text-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FFF0ED] text-[#B30000]">
                     <AlertCircle size={30} />
                 </div>

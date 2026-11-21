@@ -52,6 +52,8 @@ def require_roles(*roles: str):
         user = db.get(User, int(payload["sub"]))
         if user is None or user.role != payload.get("role"):
             raise HTTPException(status_code=401, detail="Utilisateur introuvable.")
+        if not user.actif:
+            raise HTTPException(status_code=401, detail="Compte désactivé.")
         return user
 
     return _dep

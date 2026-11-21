@@ -18,7 +18,9 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !err.config?.url?.startsWith("/auth/")) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = window.location.pathname === "/" || window.location.pathname.startsWith("/reservation") || window.location.pathname === "/profil" ? "/login" : "/pro";
+      let borne = false;
+      try { borne = sessionStorage.getItem("mode.borne") === "1"; } catch { /* sans stockage */ }
+      window.location.href = borne ? "/borne" : window.location.pathname === "/" || window.location.pathname.startsWith("/reservation") || window.location.pathname === "/profil" ? "/login" : "/pro";
     }
     return Promise.reject(err);
   },

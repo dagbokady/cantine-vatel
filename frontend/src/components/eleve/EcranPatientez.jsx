@@ -39,7 +39,7 @@ export default function EcranPatientez({ me, raison }) {
     const Icone = message.icon;
 
     return (
-        <main className="flex min-h-screen flex-col bg-white px-5">
+        <main className="flex min-h-dvh flex-col bg-white px-5">
             {/* En-tête */}
             <header className="mx-auto flex w-full max-w-[760px] items-center justify-between py-5">
                 <div>

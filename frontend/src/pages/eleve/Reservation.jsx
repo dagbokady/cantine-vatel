@@ -13,7 +13,6 @@ import { libelleJour } from "../../utils/jour";
 const LIBELLE_TYPE = {
     principal: "Plat du jour",
     sans_allergene: "Sans allergène",
-    accompagnement: "Accompagnement",
 };
 
 function OptionCarte({ option, actif, onClick }) {
@@ -47,6 +46,12 @@ function OptionCarte({ option, actif, onClick }) {
                     {mention && (
                         <p className="mt-1 text-[12px] text-[#717171]">
                             {mention}
+                        </p>
+                    )}
+
+                    {option.elements?.some((e) => !e.obligatoire) && (
+                        <p className="mt-1 text-[12px] text-[#FF5A5F]">
+                            Personnalisable
                         </p>
                     )}
 
@@ -95,10 +100,8 @@ export default function Reservation() {
     const compatibles = menu?.compatibles ?? [];
     const options = compatibles.filter((o) => o.stock_restant >= 3);
 
+    // Les accompagnements se choisissent dans la composition du plat, jamais seuls.
     const plats = options.filter((o) => o.type !== "accompagnement");
-    const accompagnements = options.filter(
-        (o) => o.type === "accompagnement"
-    );
 
     const photo =
         compatibles.find((o) => o.type === "principal")?.photo ||
@@ -126,7 +129,7 @@ export default function Reservation() {
     );
 
     return (
-        <div className="min-h-screen bg-white pb-36">
+        <div className="min-h-dvh bg-white pb-[calc(var(--cta-h,150px)+24px)]">
             <BackHeader titre="Choisis ton repas" etape={1} to="/" />
 
             <main className="mx-auto max-w-[720px] px-5 pt-5 sm:px-7">
@@ -188,7 +191,7 @@ export default function Reservation() {
                 )}
 
                 {/* Menu vide */}
-                {!chargement && !error && options.length === 0 && (
+                {!chargement && !error && plats.length === 0 && (
                     <div className="rounded-[20px] border border-[#EBEBEB] px-5 py-8 text-center">
                         <UtensilsCrossed
                             size={30}
@@ -228,31 +231,12 @@ export default function Reservation() {
                     </section>
                 )}
 
-                {/* Accompagnements */}
-                {accompagnements.length > 0 && (
-                    <section className="mb-8">
-                        <div className="mb-3">
-                            <h2
-                                className="text-[20px] font-semibold text-[#222222]"
-                                style={titreStyle}
-                            >
-                                Un accompagnement ?
-                            </h2>
-
-                            <p className="mt-1 text-[13px] text-[#717171]">
-                                Tu peux aussi choisir uniquement un accompagnement.
-                            </p>
-                        </div>
-
-                        <ul className="space-y-3">{accompagnements.map(carte)}</ul>
-                    </section>
-                )}
             </main>
 
             {/* Barre de sélection */}
             <BottomCTA
                 disabled={!choix}
-                onClick={() => navigate("/reservation/quantite")}
+                onClick={() => navigate("/reservation/composition")}
                 aside={
                     choix ? (
                         <div className="min-w-0">

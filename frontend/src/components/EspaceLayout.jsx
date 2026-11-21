@@ -62,7 +62,7 @@ export default function EspaceLayout({ titre, surTitre, onglets = [], children, 
   // Onglets avec icônes : navigation du haut dès 768 px, barre du bas en dessous.
   const responsive = onglets.length > 0 && onglets.every((o) => o.icon);
   return (
-    <div className="min-h-screen bg-white text-[#222222]">
+    <div className="min-h-dvh bg-white text-[#222222]">
       <header className="sticky top-0 z-20 border-b border-[#EBEBEB] bg-white/95 backdrop-blur">
         <div className={`mx-auto flex h-14 items-center justify-between gap-3 px-5 pt-[env(safe-area-inset-top)] ${largeur}`}>
           <div className="flex min-w-0 items-center gap-2">

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, UtensilsCrossed } from "lucide-react";
+import { Layers, Plus, Tag, UtensilsCrossed } from "lucide-react";
 import { creerPlat, erreurApi, getIngredients, getPlats } from "../../api/pro";
 import EspaceLayout, { Alerte, Bouton, Carte, Champ } from "../../components/EspaceLayout";
 import Panneau, { BoutonAction } from "../../components/Panneau";
 import { fcfa } from "../../utils/format";
+import { useAuth } from "../../hooks/useAuth";
+import { PanneauComposition, PanneauPrix } from "./PlatEdition";
 import { ONGLETS_CUISINE } from "./onglets";
 import NotificationsCommandes from "./Notifications";
 
@@ -15,6 +17,17 @@ export default function Plats() {
   const [f, setF] = useState(VIDE);
   const [msg, setMsg] = useState({ texte: "", ok: true });
   const [ouvert, setOuvert] = useState(false);
+  const [composition, setComposition] = useState(null);
+  const [prix, setPrix] = useState(null);
+  const { user } = useAuth();
+  const estChef = user?.role === "cuisine";
+
+  const remplacer = (maj, texte) => {
+    setPlats((l) => l.map((p) => (p.id === maj.id ? maj : p)));
+    setComposition(null);
+    setPrix(null);
+    setMsg({ texte, ok: true });
+  };
 
   const charger = useCallback(() => getPlats().then(setPlats), []);
   useEffect(() => { charger(); getIngredients().then(setIngs); }, [charger]);
@@ -56,13 +69,28 @@ export default function Plats() {
               )}
             </div>
             <p className="mt-3 text-[16px] font-medium text-[#222222]">{p.nom}</p>
-            <p className="text-[14px] text-[#717171]">{fcfa(p.prix)}</p>
+            <p className="text-[14px] text-[#717171]">
+              {["1", "2", "3"].map((t) => `${t}/3 ${fcfa(p.prix_portions?.[t] ?? p.prix)}`).join(" · ")}
+            </p>
             <p className="mt-1 text-[13px] text-[#717171]">{p.ingredients.join(", ")}</p>
+            {p.elements?.length > 0 && (
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {p.elements.map((e) => (
+                  <li key={e.id} className={`rounded-full px-2.5 py-1 text-[12px] ${e.obligatoire ? "bg-[#F7F7F7] text-[#222222]" : "bg-[#FFF0ED] text-[#222222]"}`}>
+                    {e.nom}{e.obligatoire ? " · inclus" : e.supplement ? ` · +${fcfa(e.supplement)}` : " · au choix"}
+                  </li>
+                ))}
+              </ul>
+            )}
             {p.allergenes.length > 0 ? (
               <p className="mt-1 text-[14px] text-[#B30000]">
                 {p.allergenes.join(", ")} · {p.impact.eleves} élèves ({p.impact.pourcentage} %) ne peuvent pas manger ce plat
               </p>
             ) : <p className="mt-1 text-[14px] text-[#222222]">Aucun allergène</p>}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <BoutonAction variante="doux" icone={Layers} onClick={() => setComposition(p)}>Composition</BoutonAction>
+              {estChef && <BoutonAction variante="doux" icone={Tag} onClick={() => setPrix(p)}>Prix</BoutonAction>}
+            </div>
           </Carte>
         ))}
       </div>
@@ -70,7 +98,7 @@ export default function Plats() {
         pied={<Bouton className="w-full" disabled={!f.nom.trim() || !f.ingredient_ids.length} onClick={enregistrer}>Créer le plat</Bouton>}>
         <div className="grid gap-3">
           <Champ label="Nom" value={f.nom} onChange={(e) => setF({ ...f, nom: e.target.value })} />
-          <Champ label="Prix du plat entier (F)" type="number" value={f.prix} onChange={(e) => setF({ ...f, prix: e.target.value })} />
+          <Champ label="Prix de la portion 3/3 (F)" type="number" value={f.prix} onChange={(e) => setF({ ...f, prix: e.target.value })} />
           <label className="block">
             <span className="text-[13px] text-[#717171]">Version sans allergène de</span>
             <select value={f.sans_allergene_de} onChange={(e) => setF({ ...f, sans_allergene_de: e.target.value })}
@@ -102,6 +130,8 @@ export default function Plats() {
         </label>
         {f.photo && <img src={f.photo} alt="" className="mt-2 h-32 rounded-[22px] object-cover" style={{ aspectRatio: "4/3" }} />}
       </Panneau>
+      <PanneauComposition plat={composition} ingredients={ings} onClose={() => setComposition(null)} onSaved={remplacer} />
+      <PanneauPrix plat={prix} onClose={() => setPrix(null)} onSaved={remplacer} />
     </EspaceLayout>
   );
 }

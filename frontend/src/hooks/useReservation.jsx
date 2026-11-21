@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { elementsParDefaut } from "../utils/format";
 
 const ReservationContext = createContext(null);
 
 const ETAT_VIDE = {
   plat: null,
   tiers: 2,
+  elements: [], // éléments facultatifs retenus (ids)
   creneau: null,
   place: null,
   confirmation: null,
@@ -15,7 +17,16 @@ export function ReservationProvider({ children }) {
   const [etat, setEtat] = useState(ETAT_VIDE);
 
   const choisirPlat = useCallback((plat) => {
-    setEtat((e) => ({ ...e, plat, reservationId: null, tiers: e.plat?.plat_id === plat.plat_id ? e.tiers : 2 }));
+    setEtat((e) => {
+      const meme = e.plat?.menu_jour_id === plat.menu_jour_id;
+      return { ...e, plat, reservationId: null, tiers: meme ? e.tiers : 2, elements: meme ? e.elements : elementsParDefaut(plat) };
+    });
+  }, []);
+  const basculerElement = useCallback((id) => {
+    setEtat((e) => ({
+      ...e,
+      elements: e.elements.includes(id) ? e.elements.filter((x) => x !== id) : [...e.elements, id],
+    }));
   }, []);
   const choisirTiers = useCallback((tiers) => {
     setEtat((e) => ({ ...e, tiers }));
@@ -44,13 +55,14 @@ export function ReservationProvider({ children }) {
       etat,
       choisirPlat,
       choisirTiers,
+      basculerElement,
       choisirCreneau,
       choisirPlace,
       confirmer,
       reset,
       choisirVaguePour,
     }),
-    [etat, choisirPlat, choisirTiers, choisirCreneau, choisirPlace, confirmer, reset, choisirVaguePour],
+    [etat, choisirPlat, choisirTiers, basculerElement, choisirCreneau, choisirPlace, confirmer, reset, choisirVaguePour],
   );
   return (
     <ReservationContext.Provider value={value}>
